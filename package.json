@@ -1,0 +1,20 @@
+{
+  "name": "sls-apb",
+  "version": "1.0.0",
+  "description": "Serverless plugin for socless Playbook Builder",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "socless",
+    "serverless",
+    "apb"
+  ],
+  "author": "Ubani Balogun",
+  "license": "ISC",
+  "dependencies": {
+    "fs-extra": "^7.0.0",
+    "lodash": "^4.17.10"
+  }
+}
