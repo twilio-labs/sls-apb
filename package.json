@@ -1,10 +1,10 @@
 {
   "name": "sls-apb",
   "version": "1.0.0",
-  "description": "Serverless plugin for socless Playbook Builder",
+  "description": "Serverless plugin for Socless Playbook Builder",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./node_modules/.bin/mocha"
   },
   "keywords": [
     "socless",
@@ -16,5 +16,8 @@
   "dependencies": {
     "fs-extra": "^7.0.0",
     "lodash": "^4.17.10"
+  },
+  "devDependencies": {
+    "mocha": "^4.1.0"
   }
 }
