@@ -25,11 +25,11 @@ describe('apb', () => {
     })
 
     it('should return "true" for Task state nested in Parallel state when correct branch of Parallel state is used as input', () => {
-      assert.equal(true, t.isStateIntegration("Slack_User_Happiness",definition.States.Parallel_Cheer_User_Up.Branches[0].States))
+      assert.equal(true, t.isStateIntegration("Slack_User_Happiness", definition.States.Parallel_Cheer_User_Up.Branches[0].States))
     })
 
     it('should throw "Error" for Task state nested in Parallel state when incorrect branch of Parallel state is used as input', () => {
-      assert.throws(() => {t.isStateIntegration("Slack_User_Happiness",definition.States.Parallel_Cheer_User_Up.Branches[1].States)},Error)
+      assert.throws(() => {t.isStateIntegration("Slack_User_Happiness", definition.States.Parallel_Cheer_User_Up.Branches[1].States)}, Error)
     })
 
     it('should throw "Error" when State does not exist in States object', () => {
@@ -42,7 +42,7 @@ describe('apb', () => {
 
     it('should return "false" for all other states states', () => {
       let testCases = ["Is_User_Happy", "User_Is_Happy", "Mark_As_Success", "Parallel_Cheer_User_Up"] // Choice, Pass, Succeed Parallel
-      _.forEach(testCases, (state) => assert.equal(false,t.isStateIntegration(state)))
+      _.forEach(testCases, (state) => assert.equal(false, t.isStateIntegration(state)))
     })
 
   })
@@ -97,7 +97,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepEqual(t.transformTaskState("Slack_User_For_Response",definition.States.Slack_User_For_Response,definition.States, DecoratorFlags), expected)
+      assert.deepEqual(t.transformTaskState("Slack_User_For_Response", definition.States.Slack_User_For_Response, definition.States, DecoratorFlags), expected)
     })
 
     it('should correctly generate non-integration task states', () => {
@@ -123,7 +123,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepEqual(t.transformTaskState("Await_User_Response",definition.States.Await_User_Response,definition.States, DecoratorFlags), expected)
+      assert.deepEqual(t.transformTaskState("Await_User_Response", definition.States.Await_User_Response, definition.States, DecoratorFlags), expected)
     })
 
 
@@ -147,7 +147,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepEqual(t.transformTaskState("End_Cheer_Up",definition.States.End_Cheer_Up, definition.States, DecoratorFlags), expected)
+      assert.deepEqual(t.transformTaskState("End_Cheer_Up", definition.States.End_Cheer_Up, definition.States, DecoratorFlags), expected)
     })
 
   })
