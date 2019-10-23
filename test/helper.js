@@ -1,8 +1,22 @@
 const testDefinition = {
 	"Playbook": "Check_User_Happiness",
 	"Comment": "Sample Playbook to Geolocate an IP",
-	"StartAt": "Slack_User_For_Response",
+	"StartAt": "New_Interaction_State",
 	"States": {
+        "New_Interaction_State": {
+            "Type": "Interaction",
+            "Resource": "${{self:custom.slack.PromptForConfirmation}}",
+            "Parameters": {
+                "no_text": "No",
+                "prompt_text": "Are you happy?",
+                "receiver": "Slack_User_For_Response",
+                "target": "$.results.Validate_Username.name",
+                "target_type": "user",
+                "text": "Hi, are you happy?",
+                "yes_text": "Yes"
+            },
+            "Next": "Slack_User_For_Response",
+        },
 		"Slack_User_For_Response": {
 			"Type": "Task",
 			"Parameters": {
