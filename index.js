@@ -6,11 +6,9 @@ const apb = require('./lib/apb');
 
 class SlsApb {
   constructor(serverless, options) {
-    this.log = (msg) => { this.serverless.cli.log(`[sls-apb] ${msg}`) }
-    this.error = (msg) => { throw new Error(`[sls-apb] ${msg}`) }
     this.sls = serverless;
     this.options = options;
-    this.config = this.setupConfig()
+    this.apb_config = this.getApbConfig()
 
     let playbooks = this.sls.service.custom.playbooks
 
@@ -29,7 +27,7 @@ class SlsApb {
         // Read playbook.json file, use APB to render the State Machine then add it to the resources list
         try {
           let stateMachine = fse.readJsonSync(playbook_path)
-          let renderedPlaybook = new apb(stateMachine)
+          let renderedPlaybook = new apb(stateMachine, this.apb_config)
 
           //temporarily store the resource
           let temp = this.sls.service.resources
@@ -51,12 +49,12 @@ class SlsApb {
     }
   }
 
-  setupConfig() {
-    const config = this.serverless.service.custom.sls_apb || {};
+  getApbConfig() {
+    const config = this.sls.service.custom.sls_apb || {};
     config.logging = Boolean(config.logging);
 
     if (!config.logging) {
-      this.log("StepFunctions logging not enabled. To ship playbook logs, set custom.sls_apb.logging = true in serverless.yml");
+      this.sls.cli.log("StepFunctions logging not enabled. To ship playbook logs, set custom.sls_apb.logging = true in serverless.yml");
     }
     return config;
   }

@@ -1,6 +1,4 @@
-const { fail } = require('assert');
 const assert = require('assert')
-const yaml = require('js-yaml');
 const apb = require('../lib/apb.js')
 const testHelper = require('./helper.js')
 
