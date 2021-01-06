@@ -1,4 +1,6 @@
+const { fail } = require('assert');
 const assert = require('assert')
+const yaml = require('js-yaml');
 const apb = require('../lib/apb.js')
 const testHelper = require('./helper.js')
 
@@ -16,7 +18,7 @@ describe('apb', () => {
 
   describe('#isStateIntegration', () => {
     it('should return "true" for a top-level Task state', () => {
-      assert.equal(true, t.isStateIntegration("Slack_User_For_Response"))
+      assert.strictEqual(true, t.isStateIntegration("Slack_User_For_Response"))
     })
 
     it('should throw "Error" for Task state nested in Parallel state when default input is used', () => {
@@ -24,7 +26,7 @@ describe('apb', () => {
     })
 
     it('should return "true" for Task state nested in Parallel state when correct branch of Parallel state is used as input', () => {
-      assert.equal(true, t.isStateIntegration("Slack_User_Happiness", definition.States.Parallel_Cheer_User_Up.Branches[0].States))
+      assert.strictEqual(true, t.isStateIntegration("Slack_User_Happiness", definition.States.Parallel_Cheer_User_Up.Branches[0].States))
     })
 
     it('should throw "Error" for Task state nested in Parallel state when incorrect branch of Parallel state is used as input', () => {
@@ -36,14 +38,14 @@ describe('apb', () => {
     })
 
     it('should return false for Await state', () => {
-      assert.equal(false, t.isStateIntegration("Await_User_Response"))
+      assert.strictEqual(false, t.isStateIntegration("Await_User_Response"))
     })
 
     it('should return "false" for all other states states', () => {
       let testCases = ["Is_User_Happy", "User_Is_Happy", "Mark_As_Success", "Parallel_Cheer_User_Up"] // Choice, Pass, Succeed Parallel
-      // _.forEach(testCases, (state) => assert.equal(false, t.isStateIntegration(state)))
+      // _.forEach(testCases, (state) => assert.strictEqual(false, t.isStateIntegration(state)))
 
-      testCases.forEach(state => assert.equal(false, t.isStateIntegration(state)))
+      testCases.forEach(state => assert.strictEqual(false, t.isStateIntegration(state)))
     })
 
   })
@@ -98,7 +100,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepEqual(t.transformTaskState("Slack_User_For_Response", definition.States.Slack_User_For_Response, definition.States, DecoratorFlags), expected)
+      assert.deepStrictEqual(t.transformTaskState("Slack_User_For_Response", definition.States.Slack_User_For_Response, definition.States, DecoratorFlags), expected)
     })
 
     it('should correctly generate non-integration task states', () => {
@@ -124,7 +126,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepEqual(t.transformTaskState("Await_User_Response", definition.States.Await_User_Response, definition.States, DecoratorFlags), expected)
+      assert.deepStrictEqual(t.transformTaskState("Await_User_Response", definition.States.Await_User_Response, definition.States, DecoratorFlags), expected)
     })
 
 
@@ -148,7 +150,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepEqual(t.transformTaskState("End_Cheer_Up", definition.States.End_Cheer_Up, definition.States, DecoratorFlags), expected)
+      assert.deepStrictEqual(t.transformTaskState("End_Cheer_Up", definition.States.End_Cheer_Up, definition.States, DecoratorFlags), expected)
     })
 
   })
@@ -199,7 +201,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepEqual(t.transformInteractionState(
+      assert.deepStrictEqual(t.transformInteractionState(
         "New_Interaction_State",
         definition.States.New_Interaction_State,
         definition.States,
@@ -207,6 +209,16 @@ describe('apb', () => {
       ), expected)
     })
 
+  })
+
+  describe('#loggingConfiguration', () => {
+    it('should conditionally include logging based on config object', () => {
+      const with_logging = new apb(definition, { logging: true }).StateMachineYaml
+      const no_logging = t.StateMachineYaml
+
+      assert(with_logging.Resources.Check_User_Happiness.Properties.LoggingConfiguration)
+      assert(!no_logging.Resources.Check_User_Happiness.Properties.LoggingConfiguration)
+    })
   })
 
 })
