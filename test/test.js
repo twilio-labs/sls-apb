@@ -1,16 +1,15 @@
 const assert = require('assert')
-const _ = require('lodash')
 const apb = require('../lib/apb.js')
 const testHelper = require('./helper.js')
 
-let {definition, Input, StateMachine} = testHelper
+let { definition, Input, StateMachine } = testHelper
 let t = new apb(definition)
 
 
 const DecoratorFlags = {
-    TaskFailureHandlerName: '_Handle_Task_Failure',
-    TaskFailureHandlerStartLabel: '_Task_Failed',
-    TaskFailureHandlerEndLabel: '_End_With_Failure'
+  TaskFailureHandlerName: '_Handle_Task_Failure',
+  TaskFailureHandlerStartLabel: '_Task_Failed',
+  TaskFailureHandlerEndLabel: '_End_With_Failure'
 }
 
 describe('apb', () => {
@@ -21,7 +20,7 @@ describe('apb', () => {
     })
 
     it('should throw "Error" for Task state nested in Parallel state when default input is used', () => {
-      assert.throws(()=> {t.isStateIntegration("Slack_User_Happiness")}, Error)
+      assert.throws(() => { t.isStateIntegration("Slack_User_Happiness") }, Error)
     })
 
     it('should return "true" for Task state nested in Parallel state when correct branch of Parallel state is used as input', () => {
@@ -29,11 +28,11 @@ describe('apb', () => {
     })
 
     it('should throw "Error" for Task state nested in Parallel state when incorrect branch of Parallel state is used as input', () => {
-      assert.throws(() => {t.isStateIntegration("Slack_User_Happiness", definition.States.Parallel_Cheer_User_Up.Branches[1].States)}, Error)
+      assert.throws(() => { t.isStateIntegration("Slack_User_Happiness", definition.States.Parallel_Cheer_User_Up.Branches[1].States) }, Error)
     })
 
     it('should throw "Error" when State does not exist in States object', () => {
-      assert.throws(() => {t.isStateIntegration("This_State_Does_Not_Exist")}, Error)
+      assert.throws(() => { t.isStateIntegration("This_State_Does_Not_Exist") }, Error)
     })
 
     it('should return false for Await state', () => {
@@ -42,7 +41,9 @@ describe('apb', () => {
 
     it('should return "false" for all other states states', () => {
       let testCases = ["Is_User_Happy", "User_Is_Happy", "Mark_As_Success", "Parallel_Cheer_User_Up"] // Choice, Pass, Succeed Parallel
-      _.forEach(testCases, (state) => assert.equal(false, t.isStateIntegration(state)))
+      // _.forEach(testCases, (state) => assert.equal(false, t.isStateIntegration(state)))
+
+      testCases.forEach(state => assert.equal(false, t.isStateIntegration(state)))
     })
 
   })
@@ -70,27 +71,27 @@ describe('apb', () => {
           "Next": "Slack_User_For_Response"
         },
 
-        Slack_User_For_Response: {  
+        Slack_User_For_Response: {
           "Type": "Task",
           "Resource": "${{self:custom.slack.PromptForConfirmation}}",
-            "Catch": [
-              {
-                  "ErrorEquals": ["States.ALL"],
-                  "Next": "Is_User_Happy"
-              }
-            ],
-          "Retry": [ 
+          "Catch": [
             {
-              "ErrorEquals": [ "ConnectionError"],
-              "IntervalSeconds": 30, 
-              "MaxAttempts": 2, 
+              "ErrorEquals": ["States.ALL"],
+              "Next": "Is_User_Happy"
+            }
+          ],
+          "Retry": [
+            {
+              "ErrorEquals": ["ConnectionError"],
+              "IntervalSeconds": 30,
+              "MaxAttempts": 2,
               "BackoffRate": 2
             },
             {
-              "ErrorEquals": [ "Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
-              "IntervalSeconds": 2, 
-              "MaxAttempts": 6, 
-              "BackoffRate": 2 
+              "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+              "IntervalSeconds": 2,
+              "MaxAttempts": 6,
+              "BackoffRate": 2
             }
           ],
           "Next": "Await_User_Response"
@@ -105,18 +106,18 @@ describe('apb', () => {
         Await_User_Response: {
           "Type": "Task",
           "Resource": "${{self:custom.core.AwaitMessageResponseActivity}}",
-          "Retry": [ 
+          "Retry": [
             {
-              "ErrorEquals": [ "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
-              "IntervalSeconds": 2, 
-              "MaxAttempts": 6, 
-              "BackoffRate": 2 
+              "ErrorEquals": ["Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+              "IntervalSeconds": 2,
+              "MaxAttempts": 6,
+              "BackoffRate": 2
             },
             {
-            "ErrorEquals": [ "Lambda.ServiceException"],
-            "IntervalSeconds": 2, 
-            "MaxAttempts": 6, 
-            "BackoffRate": 2 
+              "ErrorEquals": ["Lambda.ServiceException"],
+              "IntervalSeconds": 2,
+              "MaxAttempts": 6,
+              "BackoffRate": 2
             }
           ],
           "Next": "Is_User_Happy"
@@ -139,7 +140,7 @@ describe('apb', () => {
           "Result": {
             "Name": "End_Cheer_Up",
             "Parameters": {
-            "status": "done"
+              "status": "done"
             }
           },
           "ResultPath": "$.State_Config",
@@ -153,7 +154,7 @@ describe('apb', () => {
   })
 
   describe('#transformInteractionState', () => {
-    it('should correctly generate an Interaction task state', () =>  {
+    it('should correctly generate an Interaction task state', () => {
       let expected = {
         helper_new_interaction_state: {
           "Type": "Pass",
@@ -199,11 +200,11 @@ describe('apb', () => {
       }
 
       assert.deepEqual(t.transformInteractionState(
-          "New_Interaction_State",
-          definition.States.New_Interaction_State,
-          definition.States,
-          DecoratorFlags
-          ), expected)
+        "New_Interaction_State",
+        definition.States.New_Interaction_State,
+        definition.States,
+        DecoratorFlags
+      ), expected)
     })
 
   })
