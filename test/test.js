@@ -2,8 +2,8 @@ const assert = require('assert')
 const apb = require('../lib/apb.js')
 const testHelper = require('./helper.js')
 
-let { definition, Input, StateMachine } = testHelper
-let t = new apb(definition)
+let { basic_playbook_definition, basis_playbook_input_json, basic_playbook_state_machine_output } = testHelper
+let mock_basic_playbook_apb = new apb(basic_playbook_definition)
 
 
 const DecoratorFlags = {
@@ -16,34 +16,34 @@ describe('apb', () => {
 
   describe('#isStateIntegration', () => {
     it('should return "true" for a top-level Task state', () => {
-      assert.strictEqual(true, t.isStateIntegration("Slack_User_For_Response"))
+      assert.strictEqual(true, mock_basic_playbook_apb.isStateIntegration("Slack_User_For_Response"))
     })
 
     it('should throw "Error" for Task state nested in Parallel state when default input is used', () => {
-      assert.throws(() => { t.isStateIntegration("Slack_User_Happiness") }, Error)
+      assert.throws(() => { mock_basic_playbook_apb.isStateIntegration("Slack_User_Happiness") }, Error)
     })
 
     it('should return "true" for Task state nested in Parallel state when correct branch of Parallel state is used as input', () => {
-      assert.strictEqual(true, t.isStateIntegration("Slack_User_Happiness", definition.States.Parallel_Cheer_User_Up.Branches[0].States))
+      assert.strictEqual(true, mock_basic_playbook_apb.isStateIntegration("Slack_User_Happiness", basic_playbook_definition.States.Parallel_Cheer_User_Up.Branches[0].States))
     })
 
     it('should throw "Error" for Task state nested in Parallel state when incorrect branch of Parallel state is used as input', () => {
-      assert.throws(() => { t.isStateIntegration("Slack_User_Happiness", definition.States.Parallel_Cheer_User_Up.Branches[1].States) }, Error)
+      assert.throws(() => { mock_basic_playbook_apb.isStateIntegration("Slack_User_Happiness", basic_playbook_definition.States.Parallel_Cheer_User_Up.Branches[1].States) }, Error)
     })
 
     it('should throw "Error" when State does not exist in States object', () => {
-      assert.throws(() => { t.isStateIntegration("This_State_Does_Not_Exist") }, Error)
+      assert.throws(() => { mock_basic_playbook_apb.isStateIntegration("This_State_Does_Not_Exist") }, Error)
     })
 
     it('should return false for Await state', () => {
-      assert.strictEqual(false, t.isStateIntegration("Await_User_Response"))
+      assert.strictEqual(false, mock_basic_playbook_apb.isStateIntegration("Await_User_Response"))
     })
 
     it('should return "false" for all other states states', () => {
       let testCases = ["Is_User_Happy", "User_Is_Happy", "Mark_As_Success", "Parallel_Cheer_User_Up"] // Choice, Pass, Succeed Parallel
-      // _.forEach(testCases, (state) => assert.strictEqual(false, t.isStateIntegration(state)))
+      // _.forEach(testCases, (state) => assert.strictEqual(false, mock_basic_playbook_apb.isStateIntegration(state)))
 
-      testCases.forEach(state => assert.strictEqual(false, t.isStateIntegration(state)))
+      testCases.forEach(state => assert.strictEqual(false, mock_basic_playbook_apb.isStateIntegration(state)))
     })
 
   })
@@ -98,7 +98,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepStrictEqual(t.transformTaskState("Slack_User_For_Response", definition.States.Slack_User_For_Response, definition.States, DecoratorFlags), expected)
+      assert.deepStrictEqual(mock_basic_playbook_apb.transformTaskState("Slack_User_For_Response", basic_playbook_definition.States.Slack_User_For_Response, basic_playbook_definition.States, DecoratorFlags), expected)
     })
 
     it('should correctly generate non-integration task states', () => {
@@ -124,7 +124,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepStrictEqual(t.transformTaskState("Await_User_Response", definition.States.Await_User_Response, definition.States, DecoratorFlags), expected)
+      assert.deepStrictEqual(mock_basic_playbook_apb.transformTaskState("Await_User_Response", basic_playbook_definition.States.Await_User_Response, basic_playbook_definition.States, DecoratorFlags), expected)
     })
 
 
@@ -148,7 +148,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepStrictEqual(t.transformTaskState("End_Cheer_Up", definition.States.End_Cheer_Up, definition.States, DecoratorFlags), expected)
+      assert.deepStrictEqual(mock_basic_playbook_apb.transformTaskState("End_Cheer_Up", basic_playbook_definition.States.End_Cheer_Up, basic_playbook_definition.States, DecoratorFlags), expected)
     })
 
   })
@@ -199,24 +199,30 @@ describe('apb', () => {
         }
       }
 
-      assert.deepStrictEqual(t.transformInteractionState(
+      assert.deepStrictEqual(mock_basic_playbook_apb.transformInteractionState(
         "New_Interaction_State",
-        definition.States.New_Interaction_State,
-        definition.States,
+        basic_playbook_definition.States.New_Interaction_State,
+        basic_playbook_definition.States,
         DecoratorFlags
       ), expected)
     })
 
   })
 
-  describe('#loggingConfiguration', () => {
-    it('should conditionally include logging based on config object', () => {
-      const with_logging = new apb(definition, { logging: true }).StateMachineYaml
-      const no_logging = t.StateMachineYaml
 
+
+
+  describe('#loggingConfiguration', () => {
+    it('should include logging based on config object {logging: true}', () => {
+      const with_logging = new apb(basic_playbook_definition, { logging: true }).StateMachineYaml
       assert(with_logging.Resources.Check_User_Happiness.Properties.LoggingConfiguration)
+    })
+
+    it('should exclude logging based on config object {logging: false}', () => {
+      const no_logging = mock_basic_playbook_apb.StateMachineYaml
       assert(!no_logging.Resources.Check_User_Happiness.Properties.LoggingConfiguration)
     })
+
   })
 
 })

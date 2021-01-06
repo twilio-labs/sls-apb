@@ -1,8 +1,8 @@
-const testDefinition = {
-	"Playbook": "Check_User_Happiness",
-	"Comment": "Sample Playbook to Geolocate an IP",
-	"StartAt": "New_Interaction_State",
-	"States": {
+const basic_playbook_definition = {
+    "Playbook": "Check_User_Happiness",
+    "Comment": "Sample Playbook to Geolocate an IP",
+    "StartAt": "New_Interaction_State",
+    "States": {
         "New_Interaction_State": {
             "Type": "Interaction",
             "Resource": "${{self:custom.slack.PromptForConfirmation}}",
@@ -17,140 +17,140 @@ const testDefinition = {
             },
             "Next": "Slack_User_For_Response",
         },
-		"Slack_User_For_Response": {
-			"Type": "Task",
-			"Parameters": {
-				"no_text": "No",
-				"prompt_text": "Are you happy?",
-				"receiver": "Await_User_Response",
-				"target": "$.results.Validate_Username.name",
-				"target_type": "user",
-				"text": "Hi, are you happy?",
-				"yes_text": "Yes"
-			},
-			"Catch": [
-				{
-					"ErrorEquals": ["States.ALL"],
-					"Next": "Is_User_Happy"
-				}
-			],
-			"Retry": [ 
-				{
-					"ErrorEquals": [ "ConnectionError"],
-					"IntervalSeconds": 30, 
-					"MaxAttempts": 2, 
-					"BackoffRate": 2
-				}
-			],
-			"Resource": "${{self:custom.slack.PromptForConfirmation}}",
-			"Next": "Await_User_Response"
-		},
-		"Await_User_Response": {
-			"Type": "Task",
-			"Resource": "${{self:custom.core.AwaitMessageResponseActivity}}",
-			"Retry": [ 
-				{
-					"ErrorEquals": [ "Lambda.AWSLambdaException", "Lambda.SdkClientException"],
-					"IntervalSeconds": 2, 
-					"MaxAttempts": 6, 
-					"BackoffRate": 2 
-				}
-			],
-			"Next": "Is_User_Happy"
-		},
-		"Is_User_Happy": {
-			"Type": "Choice",
-			"Choices": [
-				{
-				"Variable": "$.results.result",
-				"StringEquals": "false",
-				"Next": "User_Is_Not_Happy"
-				}
-			],
-			"Default": "User_Is_Happy"
-		},
-		"User_Is_Happy": {
-			"Type": "Pass",
-			"Next": "Celebrate_With_User"
-		},
-		"Celebrate_With_User": {
-			"Type": "Task",
-			"Parameters": {
-				"message_template": "I'm happy too! Yay!",
-				"target": "user",
-				"target_type": "channel"
-			},
-			"Resource": "${{self:custom.slack.SendMessage}}",
-			"Next": "Mark_As_Success"
-		},
-		"Mark_As_Success": {
-			"Type": "Succeed"
-		},
-		"User_Is_Not_Happy": {
-			"Type": "Pass",
-			"Next": "Parallel_Cheer_User_Up"
-		},
-		"Parallel_Cheer_User_Up": {
-			"Type": "Parallel",
-			"Next": "End_Cheer_Up",
-			"Branches": [{
-					"StartAt": "Slack_User_Happiness",
-					"States": {
-						"Slack_User_Happiness": {
-							"Type": "Task",
-							"Parameters": {
-								"message_template": "I'm happy too! Yay!",
-								"target": "user",
-								"target_type": "channel"
-							},
-							"Resource": "${{self:custom.slack.PromptForConfirmation}}",
-							"End": true
-						}
-					}
-				},
-				{
-					"StartAt": "Order_Pizza_For_User",
-					"States": {
-						"Order_Pizza_For_User": {
-							"Type": "Task",
-							"Parameters": {
-								"type": "bbq with bacon bits",
-								"restaurant": "Five10 Pizza"
-							},
-							"Resource": "${{self:custom.hubgrub.PlaceOrder}}",
-							"Next": "Pour_Coffee_For_User"
-						},
-						"Pour_Coffee_For_User": {
-							"Type": "Task",
-							"Parameters": {
-								"how": "coffee, sugar, cream"
-							},
-							"Resource": "${{self:custom.iotBrewer.PourCoffee}}",
-							"End": true
-						}
-					}
-				}
-			]
-		},
-		"End_Cheer_Up": {
-			"Type": "Task",
-			"Parameters": {
-				"status": "done"
-			},
-			"Resource": "${{self.custom.jira.TransitionIssue}}",
-			"End": true
-		}
-	},
-	"Decorators" : {
-		"DisableDefaultRetry" : {
-			"tasks" : [ "End_Cheer_Up" ],
-			"all" : false
-		}
-	}
+        "Slack_User_For_Response": {
+            "Type": "Task",
+            "Parameters": {
+                "no_text": "No",
+                "prompt_text": "Are you happy?",
+                "receiver": "Await_User_Response",
+                "target": "$.results.Validate_Username.name",
+                "target_type": "user",
+                "text": "Hi, are you happy?",
+                "yes_text": "Yes"
+            },
+            "Catch": [
+                {
+                    "ErrorEquals": ["States.ALL"],
+                    "Next": "Is_User_Happy"
+                }
+            ],
+            "Retry": [
+                {
+                    "ErrorEquals": ["ConnectionError"],
+                    "IntervalSeconds": 30,
+                    "MaxAttempts": 2,
+                    "BackoffRate": 2
+                }
+            ],
+            "Resource": "${{self:custom.slack.PromptForConfirmation}}",
+            "Next": "Await_User_Response"
+        },
+        "Await_User_Response": {
+            "Type": "Task",
+            "Resource": "${{self:custom.core.AwaitMessageResponseActivity}}",
+            "Retry": [
+                {
+                    "ErrorEquals": ["Lambda.AWSLambdaException", "Lambda.SdkClientException"],
+                    "IntervalSeconds": 2,
+                    "MaxAttempts": 6,
+                    "BackoffRate": 2
+                }
+            ],
+            "Next": "Is_User_Happy"
+        },
+        "Is_User_Happy": {
+            "Type": "Choice",
+            "Choices": [
+                {
+                    "Variable": "$.results.result",
+                    "StringEquals": "false",
+                    "Next": "User_Is_Not_Happy"
+                }
+            ],
+            "Default": "User_Is_Happy"
+        },
+        "User_Is_Happy": {
+            "Type": "Pass",
+            "Next": "Celebrate_With_User"
+        },
+        "Celebrate_With_User": {
+            "Type": "Task",
+            "Parameters": {
+                "message_template": "I'm happy too! Yay!",
+                "target": "user",
+                "target_type": "channel"
+            },
+            "Resource": "${{self:custom.slack.SendMessage}}",
+            "Next": "Mark_As_Success"
+        },
+        "Mark_As_Success": {
+            "Type": "Succeed"
+        },
+        "User_Is_Not_Happy": {
+            "Type": "Pass",
+            "Next": "Parallel_Cheer_User_Up"
+        },
+        "Parallel_Cheer_User_Up": {
+            "Type": "Parallel",
+            "Next": "End_Cheer_Up",
+            "Branches": [{
+                "StartAt": "Slack_User_Happiness",
+                "States": {
+                    "Slack_User_Happiness": {
+                        "Type": "Task",
+                        "Parameters": {
+                            "message_template": "I'm happy too! Yay!",
+                            "target": "user",
+                            "target_type": "channel"
+                        },
+                        "Resource": "${{self:custom.slack.PromptForConfirmation}}",
+                        "End": true
+                    }
+                }
+            },
+            {
+                "StartAt": "Order_Pizza_For_User",
+                "States": {
+                    "Order_Pizza_For_User": {
+                        "Type": "Task",
+                        "Parameters": {
+                            "type": "bbq with bacon bits",
+                            "restaurant": "Five10 Pizza"
+                        },
+                        "Resource": "${{self:custom.hubgrub.PlaceOrder}}",
+                        "Next": "Pour_Coffee_For_User"
+                    },
+                    "Pour_Coffee_For_User": {
+                        "Type": "Task",
+                        "Parameters": {
+                            "how": "coffee, sugar, cream"
+                        },
+                        "Resource": "${{self:custom.iotBrewer.PourCoffee}}",
+                        "End": true
+                    }
+                }
+            }
+            ]
+        },
+        "End_Cheer_Up": {
+            "Type": "Task",
+            "Parameters": {
+                "status": "done"
+            },
+            "Resource": "${{self.custom.jira.TransitionIssue}}",
+            "End": true
+        }
+    },
+    "Decorators": {
+        "DisableDefaultRetry": {
+            "tasks": ["End_Cheer_Up"],
+            "all": false
+        }
+    }
 }
 
 
-const expectedInputJson = {
+const basis_playbook_input_json = {
     "artifacts": {},
     "errors": {},
     "parameters": {
@@ -189,7 +189,7 @@ const expectedInputJson = {
     "results": {}
 }
 
-const expectedStateMachine = {
+const basic_playbook_state_machine_output = {
     "Comment": "Sample Playbook to Geolocate an IP",
     "StartAt": "helper_slack_user_for_response",
     "States": {
@@ -318,7 +318,7 @@ const expectedStateMachine = {
 
 
 module.exports = {
-	definition: testDefinition,
-	Input: expectedInputJson,
-	StateMachine: expectedStateMachine
+    basic_playbook_definition,
+    basis_playbook_input_json,
+    basic_playbook_state_machine_output
 }
