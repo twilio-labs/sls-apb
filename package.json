@@ -14,9 +14,9 @@
   "author": "Ubani Balogun",
   "license": "ISC",
   "dependencies": {
-    "fs-extra": "^7.0.0"
+    "fs-extra": "^9.0.1"
   },
   "devDependencies": {
-    "mocha": "^4.1.0"
+    "mocha": "^8.2.1"
   }
 }
