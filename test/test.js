@@ -1,12 +1,12 @@
 const assert = require('assert')
+const { parse } = require('path')
 const apb = require('../lib/apb.js')
 const mocks = require('./mocks')
 
 const {
-  parallel_and_interaction_playbook,
-  single_task_failure_handler_playbook,
-  basis_playbook_input_json,
-  basic_playbook_state_machine_output,
+  pb_parallel_and_interaction,
+  pb_task_failure_handler,
+  pb_parse_nonstring
 } = mocks
 
 const DECORATOR_FLAGS = {
@@ -15,7 +15,7 @@ const DECORATOR_FLAGS = {
   TaskFailureHandlerEndLabel: '_End_With_Failure'
 }
 
-const apb_with_parallel_and_interactions = new apb(parallel_and_interaction_playbook)
+const apb_with_parallel_and_interactions = new apb(pb_parallel_and_interaction)
 
 describe('apb', () => {
 
@@ -29,11 +29,11 @@ describe('apb', () => {
     })
 
     it('should return "true" for Task state nested in Parallel state when correct branch of Parallel state is used as input', () => {
-      assert.strictEqual(true, apb_with_parallel_and_interactions.isStateIntegration("Slack_User_Happiness", parallel_and_interaction_playbook.States.Parallel_Cheer_User_Up.Branches[0].States))
+      assert.strictEqual(true, apb_with_parallel_and_interactions.isStateIntegration("Slack_User_Happiness", pb_parallel_and_interaction.States.Parallel_Cheer_User_Up.Branches[0].States))
     })
 
     it('should throw "Error" for Task state nested in Parallel state when incorrect branch of Parallel state is used as input', () => {
-      assert.throws(() => { apb_with_parallel_and_interactions.isStateIntegration("Slack_User_Happiness", parallel_and_interaction_playbook.States.Parallel_Cheer_User_Up.Branches[1].States) }, Error)
+      assert.throws(() => { apb_with_parallel_and_interactions.isStateIntegration("Slack_User_Happiness", pb_parallel_and_interaction.States.Parallel_Cheer_User_Up.Branches[1].States) }, Error)
     })
 
     it('should throw "Error" when State does not exist in States object', () => {
@@ -103,7 +103,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepStrictEqual(apb_with_parallel_and_interactions.transformTaskState("Slack_User_For_Response", parallel_and_interaction_playbook.States.Slack_User_For_Response, parallel_and_interaction_playbook.States, DECORATOR_FLAGS), expected)
+      assert.deepStrictEqual(apb_with_parallel_and_interactions.transformTaskState("Slack_User_For_Response", pb_parallel_and_interaction.States.Slack_User_For_Response, pb_parallel_and_interaction.States, DECORATOR_FLAGS), expected)
     })
 
     it('should correctly generate non-integration task states', () => {
@@ -129,7 +129,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepStrictEqual(apb_with_parallel_and_interactions.transformTaskState("Await_User_Response", parallel_and_interaction_playbook.States.Await_User_Response, parallel_and_interaction_playbook.States, DECORATOR_FLAGS), expected)
+      assert.deepStrictEqual(apb_with_parallel_and_interactions.transformTaskState("Await_User_Response", pb_parallel_and_interaction.States.Await_User_Response, pb_parallel_and_interaction.States, DECORATOR_FLAGS), expected)
     })
 
 
@@ -153,7 +153,7 @@ describe('apb', () => {
         }
       }
 
-      assert.deepStrictEqual(apb_with_parallel_and_interactions.transformTaskState("End_Cheer_Up", parallel_and_interaction_playbook.States.End_Cheer_Up, parallel_and_interaction_playbook.States, DECORATOR_FLAGS), expected)
+      assert.deepStrictEqual(apb_with_parallel_and_interactions.transformTaskState("End_Cheer_Up", pb_parallel_and_interaction.States.End_Cheer_Up, pb_parallel_and_interaction.States, DECORATOR_FLAGS), expected)
     })
 
   })
@@ -206,8 +206,8 @@ describe('apb', () => {
 
       assert.deepStrictEqual(apb_with_parallel_and_interactions.transformInteractionState(
         "New_Interaction_State",
-        parallel_and_interaction_playbook.States.New_Interaction_State,
-        parallel_and_interaction_playbook.States,
+        pb_parallel_and_interaction.States.New_Interaction_State,
+        pb_parallel_and_interaction.States,
         DECORATOR_FLAGS
       ), expected)
     })
@@ -216,7 +216,7 @@ describe('apb', () => {
 
   describe('#loggingConfiguration', () => {
     it('should include logging based on config object {logging: true}', () => {
-      const with_logging = new apb(parallel_and_interaction_playbook, { logging: true }).StateMachineYaml
+      const with_logging = new apb(pb_parallel_and_interaction, { logging: true }).StateMachineYaml
       assert(with_logging.Resources.Check_User_Happiness.Properties.LoggingConfiguration)
     })
 
@@ -230,13 +230,37 @@ describe('apb', () => {
   describe('#TaskFailureHandler', () => {
 
     it('should add TaskFailureHandler to catch state when decorator present', () => {
-      const apb_with_single_tfh = new apb(single_task_failure_handler_playbook);
+      const apb_with_single_tfh = new apb(pb_task_failure_handler);
 
       // create array of Next step names for all catches on Celebrate_With_User
       const catches = apb_with_single_tfh.StateMachine.States.Celebrate_With_User.Catch;
       const next_steps = catches.map(catch_obj => catch_obj.Next)
 
       assert(next_steps.includes(DECORATOR_FLAGS.TaskFailureHandlerStartLabel))
+    })
+
+  })
+
+  describe('#render_nonstring_value', () => {
+
+    it('should not produce valid json (serverless will unpack value)', () => {
+      const apb_with_parseIntBool = new apb(pb_parse_nonstring);
+
+      const state_machine_name = Object.keys(apb_with_parseIntBool.StateMachineYaml.Resources)[0]
+      const definition = apb_with_parseIntBool.StateMachineYaml.Resources[state_machine_name].Properties.DefinitionString["Fn::Sub"]
+      
+      assert.throws(() => {
+        JSON.parse(definition)
+      })
+    })
+
+    it('should remove the render_nonstring_value flag', () => {
+      const apb_with_parseIntBool = new apb(pb_parse_nonstring);
+
+      const state_machine_name = Object.keys(apb_with_parseIntBool.StateMachineYaml.Resources)[0]
+      const definition = apb_with_parseIntBool.StateMachineYaml.Resources[state_machine_name].Properties.DefinitionString["Fn::Sub"]
+      
+      assert(definition.search("render_nonstring_value") < 0)
     })
 
   })
