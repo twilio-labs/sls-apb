@@ -52,7 +52,7 @@ To automatically add a Task Failure Handler to each `Task` state that will trigg
 }
 ```
 
-To use serverless unpacking for nonstring values, use the `render_nonstring_value()` flag in your `playbook.json`. The example below is referencing an Int type in the serverless.yml custom variables definition:
+To use serverless unpacking for nonstring values (Int, Boolean, etc) that are also valid JSON, use the `render_nonstring_value()` flag in your `playbook.json`. The example below is referencing an Int type in the serverless.yml custom variables definition:
 
 ```json
             "Wait_24_Hour" : {

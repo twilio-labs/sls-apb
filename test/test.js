@@ -1,19 +1,14 @@
 const assert = require('assert')
 const { parse } = require('path')
 const apb = require('../lib/apb.js')
-const mocks = require('./mocks')
-
+const { PARSE_SELF_NAME, DECORATOR_FLAGS } = require('../lib/constants')
 const {
   pb_parallel_and_interaction,
   pb_task_failure_handler,
   pb_parse_nonstring
-} = mocks
+} = require('./mocks')
 
-const DECORATOR_FLAGS = {
-  TaskFailureHandlerName: '_Handle_Task_Failure',
-  TaskFailureHandlerStartLabel: '_Task_Failed',
-  TaskFailureHandlerEndLabel: '_End_With_Failure'
-}
+
 
 const apb_with_parallel_and_interactions = new apb(pb_parallel_and_interaction)
 
@@ -46,7 +41,6 @@ describe('apb', () => {
 
     it('should return "false" for all other states states', () => {
       let testCases = ["Is_User_Happy", "User_Is_Happy", "Mark_As_Success", "Parallel_Cheer_User_Up"] // Choice, Pass, Succeed Parallel
-      // _.forEach(testCases, (state) => assert.strictEqual(false, apb_with_parallel_and_interactions.isStateIntegration(state)))
 
       testCases.forEach(state => assert.strictEqual(false, apb_with_parallel_and_interactions.isStateIntegration(state)))
     })
@@ -241,28 +235,41 @@ describe('apb', () => {
 
   })
 
-  describe('#render_nonstring_value', () => {
+  describe(`#${PARSE_SELF_NAME}`, () => {
+
+    it(`should contain ${PARSE_SELF_NAME} before parsing`, () => {
+      assert(JSON.stringify(pb_parse_nonstring).search(PARSE_SELF_NAME) >= 0)
+    })
+
+    it('should remove the render_nonstring_value flag', () => {
+      const apb_with_render_nonstring_flag = new apb(pb_parse_nonstring);
+
+      const state_machine_name = Object.keys(apb_with_render_nonstring_flag.StateMachineYaml.Resources)[0]
+      const definition = apb_with_render_nonstring_flag.StateMachineYaml.Resources[state_machine_name].Properties.DefinitionString["Fn::Sub"]
+      
+      assert(definition.search(PARSE_SELF_NAME) < 0)
+    })
 
     it('should not produce valid json (serverless will unpack value)', () => {
-      const apb_with_parseIntBool = new apb(pb_parse_nonstring);
+      const apb_with_render_nonstring_flag = new apb(pb_parse_nonstring);
 
-      const state_machine_name = Object.keys(apb_with_parseIntBool.StateMachineYaml.Resources)[0]
-      const definition = apb_with_parseIntBool.StateMachineYaml.Resources[state_machine_name].Properties.DefinitionString["Fn::Sub"]
+      const state_machine_name = Object.keys(apb_with_render_nonstring_flag.StateMachineYaml.Resources)[0]
+      const definition = apb_with_render_nonstring_flag.StateMachineYaml.Resources[state_machine_name].Properties.DefinitionString["Fn::Sub"]
       
       assert.throws(() => {
         JSON.parse(definition)
       })
     })
 
-    it('should remove the render_nonstring_value flag', () => {
-      const apb_with_parseIntBool = new apb(pb_parse_nonstring);
-
-      const state_machine_name = Object.keys(apb_with_parseIntBool.StateMachineYaml.Resources)[0]
-      const definition = apb_with_parseIntBool.StateMachineYaml.Resources[state_machine_name].Properties.DefinitionString["Fn::Sub"]
+    it('should produce valid json when flag is not used', () => {
+      const state_machine_name = Object.keys(apb_with_parallel_and_interactions.StateMachineYaml.Resources)[0]
+      const definition = apb_with_parallel_and_interactions.StateMachineYaml.Resources[state_machine_name].Properties.DefinitionString["Fn::Sub"]
       
-      assert(definition.search("render_nonstring_value") < 0)
+      assert.doesNotThrow(() => {
+        JSON.parse(definition)
+      })
     })
-
+    
   })
 
 })
