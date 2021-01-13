@@ -7,6 +7,7 @@ const {
   single_task_failure_handler_playbook,
   basis_playbook_input_json,
   basic_playbook_state_machine_output,
+  parseIntBool_playbook
 } = mocks
 
 const DECORATOR_FLAGS = {
@@ -237,6 +238,22 @@ describe('apb', () => {
       const next_steps = catches.map(catch_obj => catch_obj.Next)
 
       assert(next_steps.includes(DECORATOR_FLAGS.TaskFailureHandlerStartLabel))
+    })
+
+  })
+
+  describe('#apb_parseIntBool', () => {
+
+    it('should add apb_parseIntBool to catch state when decorator present', () => {
+      const apb_with_parseIntBool = new apb(parseIntBool_playbook);
+
+      // create array of Next step names for all catches on Celebrate_With_User
+      const parse_step = apb_with_parseIntBool.StateMachine.States.Wait_24_Hour;
+      console.log(parse_step)
+
+      console.log(JSON.stringify(apb_with_parseIntBool.StateMachine, null, 4).replace(/(\"apb_parseIntBool\()(.*)(\)\")/g,"$2"))
+
+      assert(parse_step == {})
     })
 
   })
