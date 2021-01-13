@@ -166,7 +166,7 @@ module.exports = {
             },
             "Wait_24_Hour" : {
                 "Type" : "Wait",
-                "Seconds" : "render_nonstring_value(${{self:custom.Wait_24_Hour_Config.${{self:provider.stage}}}})",
+                "Seconds" : "apb_render_nonstring_value(${{self:custom.Wait_24_Hour_Config.${{self:provider.stage}}}})",
                 "Next": "End_Cheer_Up"
             },
             "End_Cheer_Up": {

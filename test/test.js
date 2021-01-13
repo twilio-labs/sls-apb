@@ -241,7 +241,7 @@ describe('apb', () => {
       assert(JSON.stringify(pb_parse_nonstring).search(PARSE_SELF_NAME) >= 0)
     })
 
-    it('should remove the render_nonstring_value flag', () => {
+    it('should remove the apb_render_nonstring_value flag', () => {
       const apb_with_render_nonstring_flag = new apb(pb_parse_nonstring);
 
       const state_machine_name = Object.keys(apb_with_render_nonstring_flag.StateMachineYaml.Resources)[0]
