@@ -51,3 +51,16 @@ To automatically add a Task Failure Handler to each `Task` state that will trigg
    }
 }
 ```
+
+## Feature Flags
+To use cloudwatch logs for SOCless playbooks:
+1. Ensure that you are on the most recent version of the Socless core stack which is exporting PlaybooksLogGroup as seen [here]()
+2. Add the following to your playbook repo's `serverless.yml`
+
+**serverless.yml:**
+
+```yaml
+custom:
+  sls_apb:
+      logging: true
+```
