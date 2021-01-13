@@ -52,6 +52,16 @@ To automatically add a Task Failure Handler to each `Task` state that will trigg
 }
 ```
 
+To use serverless unpacking for nonstring values (Int, Boolean, etc) that are also valid JSON, use the `apb_render_nonstring_value()` flag in your `playbook.json`. The example below is referencing an Int type in the serverless.yml custom variables definition:
+
+```json
+            "Wait_24_Hour" : {
+                "Type" : "Wait",
+                "Seconds" : "apb_render_nonstring_value(${{self:custom.Wait_24_Hour_Config.${{self:provider.stage}}}})",
+                "Next": "End_Cheer_Up"
+            },
+```
+
 ## Feature Flags
 To use cloudwatch logs for SOCless playbooks:
 1. Ensure that you are on the most recent version of the Socless core stack which is exporting PlaybooksLogGroup as seen [here]()

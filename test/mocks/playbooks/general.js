@@ -1,5 +1,5 @@
 module.exports = {
-    parallel_and_interaction_playbook: {
+    pb_parallel_and_interaction: {
         "Playbook": "Check_User_Happiness",
         "Comment": "Sample Playbook to Geolocate an IP",
         "StartAt": "New_Interaction_State",
@@ -146,6 +146,36 @@ module.exports = {
             "DisableDefaultRetry": {
                 "tasks": ["End_Cheer_Up"],
                 "all": false
+            }
+        }
+    },
+    pb_parse_nonstring: {
+        "Playbook": "testing_non_string_renderer",
+        "Comment": "mock nonstring renderer playbook",
+        "StartAt": "Celebrate_With_User",
+        "States": {
+            "Celebrate_With_User": {
+                "Type": "Task",
+                "Parameters": {
+                    "message_template": "I'm happy too! Yay!",
+                    "target": "U123456",
+                    "target_type": "slack_id"
+                },
+                "Resource": "${{self:custom.slack.SendMessage}}",
+                "Next": "Wait_24_Hour"
+            },
+            "Wait_24_Hour" : {
+                "Type" : "Wait",
+                "Seconds" : "apb_render_nonstring_value(${{self:custom.Wait_24_Hour_Config.${{self:provider.stage}}}})",
+                "Next": "End_Cheer_Up"
+            },
+            "End_Cheer_Up": {
+                "Type": "Task",
+                "Parameters": {
+                    "status": "done"
+                },
+                "Resource": "${{self.custom.jira.TransitionIssue}}",
+                "End": true
             }
         }
     }

@@ -1,5 +1,5 @@
 module.exports = {
-    single_task_failure_handler_playbook: {
+    pb_task_failure_handler: {
         "Playbook": "Test_TFH",
         "Comment": "mock tfh playbook",
         "StartAt": "Celebrate_With_User",
