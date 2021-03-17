@@ -1,7 +1,7 @@
 const assert = require('assert')
 const { parse } = require('path')
-const apb = require('../lib/apb.js')
-const { PARSE_SELF_NAME, DECORATOR_FLAGS } = require('../lib/constants')
+const { apb } = require('../dist/apb.js')
+const { PARSE_SELF_NAME, DECORATOR_FLAGS } = require('../dist/constants')
 const {
   pb_parallel_and_interaction,
   pb_task_failure_handler,

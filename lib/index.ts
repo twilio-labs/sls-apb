@@ -1,16 +1,19 @@
 'use strict';
 
-const fse = require('fs-extra');
-const _ = require('lodash');
-const apb = require('./lib/apb');
+import fse from 'fs-extra';
+import { apb } from './apb';
 
-class SlsApb {
+export default class SlsApb {
+  sls: any
+  options: any
+  apb_config: any
+
   constructor(serverless, options) {
     this.sls = serverless;
     this.options = options;
     this.apb_config = this.getApbConfig()
 
-    let playbooks = this.sls.service.custom.playbooks
+    let playbooks: string[] = this.sls.service.custom.playbooks
 
     if (!playbooks) {
       this.sls.cli.log('Warning: No playbooks listed for deployment. List playbooks under serverless.yml `custom.playbooks` section to deploy them')
@@ -19,7 +22,7 @@ class SlsApb {
         this.sls.service.resources = []
       }
 
-      _.forEach(playbooks, (playbook_dir) => {
+      playbooks.forEach((playbook_dir) => {
         // Create the path to the playbook.json file
         let playbook_path = `./playbooks/${playbook_dir}/playbook.json`
         this.sls.cli.log(`Rendering State Machine for ${playbook_path}...`)
@@ -61,4 +64,3 @@ class SlsApb {
 
 }
 
-module.exports = SlsApb;
