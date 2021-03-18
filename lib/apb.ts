@@ -1,6 +1,7 @@
 import { StepFunction, State, TaskState, InteractionState } from "./stepFunction";
-import { HelperState } from "./socless_psuedo_states";
+import { HelperState, PlaybookDefinition } from "./socless_psuedo_states";
 import { PARSE_SELF_NAME, DEFAULT_RETRY, DECORATOR_FLAGS } from './constants'
+import { PlaybookValidationError } from "./errors";
 
 const parse_self_pattern = new RegExp(`(\\"${PARSE_SELF_NAME}\\()(.*)(\\)\\")`, 'g')
 
@@ -14,7 +15,8 @@ export class apb {
   PlaybookName : string
   StateMachineYaml : Object
 
-  constructor(definition: any, apb_config = {}) {
+  constructor(definition: PlaybookDefinition, apb_config = {}) {
+    this.validateTopLevelKeys(definition)
     this.DecoratorFlags = {
       hasTaskFailureHandler: false,
       ...DECORATOR_FLAGS}
@@ -27,6 +29,13 @@ export class apb {
     this.StateMachineYaml = {} // Post-SOCless Cloudformation Yaml 
 
     this.transformStateMachine(definition)
+  }
+
+  validateTopLevelKeys(definition: PlaybookDefinition) {
+    const REQUIRED_FIELDS = ['Playbook', 'Comment', 'StartAt', 'States']
+    REQUIRED_FIELDS.forEach(key => {
+      if (!definition[key]) throw new PlaybookValidationError(`Playbook definition does not have the required top-level key, '${key}'`)
+    })
   }
 
   //* BOOLEAN CHECKS & Validators /////////////////////////////////////////////////////
@@ -54,13 +63,6 @@ export class apb {
     } else {
       throw new Error("Decorator.TaskFailureHandler configured incorrectly. Must be a Task or Parallel state")
     }
-  }
-
-  validateDefinition(definition: any) {
-    const REQUIRED_FIELDS = ['Playbook', 'Comment', 'StartAt', 'States']
-    REQUIRED_FIELDS.forEach(key => {
-      if (!definition[key]) throw new Error(`Playbook definition does not have the required top-level key, '${key}'`)
-    })
   }
 
   taskErrorHandlerExists() {
@@ -339,8 +341,7 @@ export class apb {
     return this.apb_config.logging ? logs_enabled : logs_disabled;
   }
 
-  transformStateMachine(definition: any) {
-    this.validateDefinition(definition)
+  transformStateMachine(definition: PlaybookDefinition) {
     let { Playbook, States, Decorators, ...topLevel } = definition
 
     this.Decorators = Decorators || {}

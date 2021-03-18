@@ -29,10 +29,12 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.apb = void 0;
 var constants_1 = require("./constants");
+var errors_1 = require("./errors");
 var parse_self_pattern = new RegExp("(\\\"" + constants_1.PARSE_SELF_NAME + "\\()(.*)(\\)\\\")", 'g');
 var apb = /** @class */ (function () {
     function apb(definition, apb_config) {
         if (apb_config === void 0) { apb_config = {}; }
+        this.validateTopLevelKeys(definition);
         this.DecoratorFlags = __assign({ hasTaskFailureHandler: false }, constants_1.DECORATOR_FLAGS);
         this.apb_config = apb_config;
         this.States = {};
@@ -41,6 +43,13 @@ var apb = /** @class */ (function () {
         this.StateMachineYaml = {}; // Post-SOCless Cloudformation Yaml 
         this.transformStateMachine(definition);
     }
+    apb.prototype.validateTopLevelKeys = function (definition) {
+        var REQUIRED_FIELDS = ['Playbook', 'Comment', 'StartAt', 'States'];
+        REQUIRED_FIELDS.forEach(function (key) {
+            if (!definition[key])
+                throw new errors_1.PlaybookValidationError("Playbook definition does not have the required top-level key, '" + key + "'");
+        });
+    };
     //* BOOLEAN CHECKS & Validators /////////////////////////////////////////////////////
     apb.prototype.isStateIntegration = function (stateName, States) {
         if (States === void 0) { States = this.States; }
@@ -66,13 +75,6 @@ var apb = /** @class */ (function () {
         else {
             throw new Error("Decorator.TaskFailureHandler configured incorrectly. Must be a Task or Parallel state");
         }
-    };
-    apb.prototype.validateDefinition = function (definition) {
-        var REQUIRED_FIELDS = ['Playbook', 'Comment', 'StartAt', 'States'];
-        REQUIRED_FIELDS.forEach(function (key) {
-            if (!definition[key])
-                throw new Error("Playbook definition does not have the required top-level key, '" + key + "'");
-        });
     };
     apb.prototype.taskErrorHandlerExists = function () {
         return this.Decorators.TaskFailureHandler && this.validateTaskFailureHandlerDecorator(this.Decorators.TaskFailureHandler);
@@ -332,7 +334,6 @@ var apb = /** @class */ (function () {
     };
     apb.prototype.transformStateMachine = function (definition) {
         var _a, _b;
-        this.validateDefinition(definition);
         var Playbook = definition.Playbook, States = definition.States, Decorators = definition.Decorators, topLevel = __rest(definition, ["Playbook", "States", "Decorators"]);
         this.Decorators = Decorators || {};
         if (this.Decorators) {
