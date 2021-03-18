@@ -5,7 +5,9 @@ const { PARSE_SELF_NAME, DECORATOR_FLAGS } = require('../dist/constants')
 const {
   pb_parallel_and_interaction,
   pb_task_failure_handler,
-  pb_parse_nonstring
+  pb_parse_nonstring,
+  socless_slack_integration_test_playbook,
+  expected_state_machine_socless_slack_integration_test_playbook
 } = require('./mocks')
 
 
@@ -13,6 +15,14 @@ const {
 const apb_with_parallel_and_interactions = new apb(pb_parallel_and_interaction)
 
 describe('apb', () => {
+  describe('#build_full_playbook_correctly', () => {
+    it('socless_slack_integration_test should return expected state machine', () => {
+      const apb_with_socless_slack_integration_test = new apb(socless_slack_integration_test_playbook)
+      
+      assert.strictEqual(JSON.stringify(expected_state_machine_socless_slack_integration_test_playbook), JSON.stringify(apb_with_socless_slack_integration_test.StateMachine))
+    })
+  })
+
 
   describe('#isStateIntegration', () => {
     it('should return "true" for a top-level Task state', () => {
