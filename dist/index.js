@@ -7,7 +7,6 @@ var __spreadArray = (this && this.__spreadArray) || function (to, from) {
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-Object.defineProperty(exports, "__esModule", { value: true });
 var fs_extra_1 = __importDefault(require("fs-extra"));
 var apb_1 = require("./apb");
 var SlsApb = /** @class */ (function () {
@@ -62,4 +61,4 @@ var SlsApb = /** @class */ (function () {
     };
     return SlsApb;
 }());
-exports.default = SlsApb;
+module.exports = SlsApb;

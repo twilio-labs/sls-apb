@@ -3,7 +3,7 @@
 import fse from 'fs-extra';
 import { apb } from './apb';
 
-export default class SlsApb {
+class SlsApb {
   sls: any
   options: any
   apb_config: any
@@ -64,3 +64,4 @@ export default class SlsApb {
 
 }
 
+export = SlsApb
