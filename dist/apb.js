@@ -33,15 +33,46 @@ var errors_1 = require("./errors");
 var parse_self_pattern = new RegExp("(\\\"" + constants_1.PARSE_SELF_NAME + "\\()(.*)(\\)\\\")", 'g');
 var apb = /** @class */ (function () {
     function apb(definition, apb_config) {
+        var _a, _b;
         if (apb_config === void 0) { apb_config = {}; }
         this.validateTopLevelKeys(definition);
-        this.DecoratorFlags = __assign({ hasTaskFailureHandler: false }, constants_1.DECORATOR_FLAGS);
         this.apb_config = apb_config;
-        this.States = {};
-        this.PlaybookName = "";
-        // this.StateMachine = {}      // Post-SOCless Step Functions State Machine dictionary
-        this.StateMachineYaml = {}; // Post-SOCless Cloudformation Yaml 
-        this.transformStateMachine(definition);
+        this.DecoratorFlags = __assign({ hasTaskFailureHandler: false }, constants_1.DECORATOR_FLAGS);
+        var Playbook = definition.Playbook, States = definition.States, Decorators = definition.Decorators, StartAt = definition.StartAt, Comment = definition.Comment, topLevel = __rest(definition, ["Playbook", "States", "Decorators", "StartAt", "Comment"]);
+        this.Decorators = Decorators || {};
+        this.PlaybookName = Playbook;
+        this.States = States;
+        // Check for TaskFailureHandler Decorator and modify this.States accordingly
+        if (this.Decorators) {
+            if (this.taskErrorHandlerExists()) {
+                this.DecoratorFlags.hasTaskFailureHandler = true;
+                Object.assign(this.States, this.genTaskFailureHandlerStates(this.Decorators.TaskFailureHandler));
+            }
+            else {
+                this.DecoratorFlags.hasTaskFailureHandler = false;
+            }
+        }
+        // build resolved state machine from socless states
+        this.StateMachine = __assign(__assign({}, topLevel), { Comment: Comment, StartAt: this.resolveStateName(StartAt), States: this.transformStates() });
+        // build finalized yaml output
+        this.StateMachineYaml = {
+            Resources: (_a = {},
+                _a[this.PlaybookName] = {
+                    Type: "AWS::StepFunctions::StateMachine",
+                    Properties: __assign({ RoleArn: "${{cf:socless-${{self:provider.stage}}.StatesExecutionRoleArn}}", StateMachineName: this.PlaybookName, DefinitionString: {
+                            "Fn::Sub": JSON.stringify(this.StateMachine, null, 4).replace(parse_self_pattern, "$2")
+                        } }, this.buildLoggingConfiguration())
+                },
+                _a),
+            Outputs: (_b = {},
+                _b[this.PlaybookName] = {
+                    Description: Comment,
+                    Value: {
+                        Ref: this.PlaybookName
+                    }
+                },
+                _b)
+        };
     }
     apb.prototype.validateTopLevelKeys = function (definition) {
         var REQUIRED_FIELDS = ['Playbook', 'Comment', 'StartAt', 'States'];
@@ -331,43 +362,6 @@ var apb = /** @class */ (function () {
         };
         var logs_disabled = {};
         return this.apb_config.logging ? logs_enabled : logs_disabled;
-    };
-    apb.prototype.transformStateMachine = function (definition) {
-        var _a, _b;
-        var Playbook = definition.Playbook, States = definition.States, Decorators = definition.Decorators, topLevel = __rest(definition, ["Playbook", "States", "Decorators"]);
-        this.Decorators = Decorators || {};
-        if (this.Decorators) {
-            // Check for TaskFailureHandler Decorator and modify 'States' accordingly
-            if (this.taskErrorHandlerExists()) {
-                this.DecoratorFlags.hasTaskFailureHandler = true;
-                Object.assign(States, this.genTaskFailureHandlerStates(this.Decorators.TaskFailureHandler));
-            }
-            else {
-                this.DecoratorFlags.hasTaskFailureHandler = false;
-            }
-        }
-        this.States = States;
-        this.PlaybookName = Playbook;
-        this.StateMachine = __assign(__assign({}, topLevel), { States: this.transformStates(), StartAt: this.resolveStateName(topLevel.StartAt) });
-        // Object.assign(this.StateMachine, topLevel, { States: this.transformStates(), StartAt: this.resolveStateName(topLevel.StartAt) })
-        this.StateMachineYaml = {
-            Resources: (_a = {},
-                _a[this.PlaybookName] = {
-                    Type: "AWS::StepFunctions::StateMachine",
-                    Properties: __assign({ RoleArn: "${{cf:socless-${{self:provider.stage}}.StatesExecutionRoleArn}}", StateMachineName: this.PlaybookName, DefinitionString: {
-                            "Fn::Sub": JSON.stringify(this.StateMachine, null, 4).replace(parse_self_pattern, "$2")
-                        } }, this.buildLoggingConfiguration())
-                },
-                _a),
-            Outputs: (_b = {},
-                _b[this.PlaybookName] = {
-                    Description: topLevel.Comment,
-                    Value: {
-                        Ref: this.PlaybookName
-                    }
-                },
-                _b)
-        };
     };
     return apb;
 }());
