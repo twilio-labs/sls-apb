@@ -10,3 +10,5 @@ export const DECORATOR_FLAGS = Object.freeze({
         TaskFailureHandlerStartLabel: '_Task_Failed',
         TaskFailureHandlerEndLabel: '_End_With_Failure'
     })
+
+export const PLAYBOOK_FORMATTER_STEP_NAME = "PLAYBOOK_FORMATTER"

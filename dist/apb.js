@@ -52,8 +52,9 @@ var apb = /** @class */ (function () {
                 this.DecoratorFlags.hasTaskFailureHandler = false;
             }
         }
+        var starting_step = this.generate_playbook_start_step(StartAt);
         // build resolved state machine from socless states
-        this.StateMachine = __assign(__assign({}, topLevel), { Comment: Comment, StartAt: this.resolveStateName(StartAt), States: this.transformStates() });
+        this.StateMachine = __assign(__assign({}, topLevel), { Comment: Comment, StartAt: constants_1.PLAYBOOK_FORMATTER_STEP_NAME, States: __assign(__assign({}, starting_step), this.transformStates()) });
         // build finalized yaml output
         this.StateMachineYaml = {
             Resources: (_a = {},
@@ -82,13 +83,14 @@ var apb = /** @class */ (function () {
         });
     };
     //* BOOLEAN CHECKS & Validators /////////////////////////////////////////////////////
-    apb.prototype.isStateIntegration = function (stateName, States) {
+    apb.prototype.isInteractionStateWithParameters = function (stateName, States) {
         if (States === void 0) { States = this.States; }
         if (States[stateName] === undefined) {
             throw new Error("State " + stateName + " does not exist in the States object");
         }
         var state_to_check = States[stateName];
-        return ((state_to_check.Type === "Task" || state_to_check.Type === "Interaction") && !!state_to_check['Parameters']);
+        // return ((state_to_check.Type === "Task" || state_to_check.Type === "Interaction") && !!state_to_check['Parameters'])
+        return (state_to_check.Type === "Interaction" && !!state_to_check['Parameters']);
     };
     apb.prototype.isDefaultRetryDisabled = function (stateName) {
         if (this.Decorators.DisableDefaultRetry) {
@@ -149,7 +151,7 @@ var apb = /** @class */ (function () {
     };
     apb.prototype.resolveStateName = function (stateName, States) {
         if (States === void 0) { States = this.States; }
-        if (this.isStateIntegration(stateName, States)) {
+        if (this.isInteractionStateWithParameters(stateName, States)) {
             return this.genIntegrationHelperStateName(stateName);
         }
         else {
@@ -201,18 +203,43 @@ var apb = /** @class */ (function () {
             _a[stateName] = Object.assign({}, stateConfig, { Choices: choices }),
             _a;
     };
+    apb.prototype.generateParametersForSoclessTask = function (state_name, handle_state_kwargs) {
+        var parameters = {
+            "execution_id.$": "$.execution_id",
+            "artifacts.$": "$.artifacts",
+            "errors.$": "$.errors",
+            "results.$": "$.results",
+            "State_Config": {
+                "Name": state_name,
+                "Parameters": handle_state_kwargs
+            },
+        };
+        return parameters;
+    };
+    //! Interactions still need helper states ):
+    // generateParametersForSoclessInteraction(state_name: string, handle_state_kwargs: Record<string, any>, function_name: string){
+    //   const parameters : SoclessInteractionStepParameters = {
+    //     FunctionName: function_name,
+    //     Payload: {
+    //       "sfn_context.$" : "$",
+    //       "task_token.$": "$$.Task.Token",
+    //       ...this.generateParametersForSoclessTask(state_name, handle_state_kwargs),
+    //     },
+    //   }
+    //   return parameters
+    // }
     apb.prototype.transformTaskState = function (stateName, stateConfig, States, DecoratorFlags) {
-        var _a, _b;
+        var _a;
         var output = {};
         var newConfig = Object.assign({}, stateConfig);
-        if (!!stateConfig['Next']) {
-            Object.assign(newConfig, { Next: this.resolveStateName(stateConfig.Next, States) });
+        if (!!newConfig['Next']) {
+            Object.assign(newConfig, { Next: this.resolveStateName(newConfig.Next, States) });
         }
-        if (!!stateConfig['Catch']) {
-            Object.assign(newConfig, { Catch: this.transformCatchConfig(stateConfig.Catch, States) });
+        if (!!newConfig['Catch']) {
+            Object.assign(newConfig, { Catch: this.transformCatchConfig(newConfig.Catch, States) });
         }
-        if (!!stateConfig['Retry']) {
-            Object.assign(newConfig, { Retry: this.transformRetryConfig(stateConfig.Retry, stateName) });
+        if (!!newConfig['Retry']) {
+            Object.assign(newConfig, { Retry: this.transformRetryConfig(newConfig.Retry, stateName) });
         }
         else if (!this.isDefaultRetryDisabled(stateName)) {
             Object.assign(newConfig, { "Retry": [constants_1.DEFAULT_RETRY] });
@@ -222,14 +249,11 @@ var apb = /** @class */ (function () {
             var handlerCatchConfig = [this.genTaskFailureHandlerCatchConfig(stateName)];
             newConfig.Catch = __spreadArray(__spreadArray([], currentCatchConfig), handlerCatchConfig);
         }
-        if (this.isStateIntegration(stateName, States)) {
-            // Generate helper state
-            var helperState = this.genHelperState(stateConfig, stateName);
-            var helperStateName = this.genIntegrationHelperStateName(stateName);
-            Object.assign(output, (_a = {}, _a[helperStateName] = helperState, _a));
+        var handle_state_parameters = newConfig.Parameters;
+        if (handle_state_parameters) {
+            newConfig.Parameters = this.generateParametersForSoclessTask(stateName, handle_state_parameters);
         }
-        delete newConfig['Parameters'];
-        Object.assign(output, (_b = {}, _b[stateName] = newConfig, _b));
+        Object.assign(output, (_a = {}, _a[stateName] = newConfig, _a));
         return output;
     };
     apb.prototype.transformInteractionState = function (stateName, stateConfig, States, DecoratorFlags) {
@@ -253,7 +277,7 @@ var apb = /** @class */ (function () {
             var handlerCatchConfig = [this.genTaskFailureHandlerCatchConfig(stateName)];
             newConfig.Catch = __spreadArray(__spreadArray([], currentCatchConfig), handlerCatchConfig);
         }
-        if (this.isStateIntegration(stateName, States)) {
+        if (this.isInteractionStateWithParameters(stateName, States)) {
             // Generate helper state and set Invoke lambda resource
             var helperState = this.genHelperState(stateConfig, stateName);
             var helperStateName = this.genIntegrationHelperStateName(stateName);
@@ -267,6 +291,8 @@ var apb = /** @class */ (function () {
                 "task_token.$": "$$.Task.Token"
             }
         };
+        //! Interactions still need helper states ):
+        // newConfig.Parameters = this.generateParametersForSoclessInteraction(stateName, newConfig.Parameters, newConfig.Resource)
         newConfig.Resource = "arn:aws:states:::lambda:invoke.waitForTaskToken";
         newConfig.Type = "Task";
         Object.assign(output, (_b = {}, _b[stateName] = newConfig, _b));
@@ -362,6 +388,22 @@ var apb = /** @class */ (function () {
         };
         var logs_disabled = {};
         return this.apb_config.logging ? logs_enabled : logs_disabled;
+    };
+    apb.prototype.generate_playbook_start_step = function (start_at_step_name) {
+        var _a;
+        var initial_step = (_a = {},
+            _a[constants_1.PLAYBOOK_FORMATTER_STEP_NAME] = {
+                "Type": "Pass",
+                "Parameters": {
+                    "execution_id.$": "$.execution_id",
+                    "artifacts.$": "$.artifacts",
+                    "results": {},
+                    "errors": {},
+                },
+                "Next": this.resolveStateName(start_at_step_name)
+            },
+            _a);
+        return initial_step;
     };
     return apb;
 }());

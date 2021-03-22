@@ -9,7 +9,8 @@ const {
   pb_parse_nonstring,
   socless_slack_integration_test_playbook,
   expected_state_machine_socless_slack_integration_test_playbook,
-  pb_with_missing_top_level_keys
+  pb_with_missing_top_level_keys,
+  expected_output_pb_parallel_and_interaction
 } = require('./mocks')
 
 
@@ -20,8 +21,11 @@ describe('apb', () => {
   describe('#build_full_playbook_correctly', () => {
     it('socless_slack_integration_test should return expected state machine', () => {
       const apb_with_socless_slack_integration_test = new apb(socless_slack_integration_test_playbook)
-      
-      assert.strictEqual(JSON.stringify(expected_state_machine_socless_slack_integration_test_playbook), JSON.stringify(apb_with_socless_slack_integration_test.StateMachine))
+      assert.deepStrictEqual(expected_state_machine_socless_slack_integration_test_playbook, apb_with_socless_slack_integration_test.StateMachine)
+    })
+
+    it('pb_parallel_and_interaction should return expected state machine', () => {
+      assert.deepStrictEqual(apb_with_parallel_and_interactions.StateMachine, expected_output_pb_parallel_and_interaction)
     })
   })
 
@@ -32,35 +36,24 @@ describe('apb', () => {
   })
 
 
-  describe('#isStateIntegration', () => {
-    it('should return "true" for a top-level Task state', () => {
-      assert.strictEqual(true, apb_with_parallel_and_interactions.isStateIntegration("Slack_User_For_Response"))
-    })
+  describe('#isInteractionStateWithParameters', () => {
 
-    it('should throw "Error" for Task state nested in Parallel state when default input is used', () => {
-      assert.throws(() => { apb_with_parallel_and_interactions.isStateIntegration("Slack_User_Happiness") }, Error)
-    })
-
-    it('should return "true" for Task state nested in Parallel state when correct branch of Parallel state is used as input', () => {
-      assert.strictEqual(true, apb_with_parallel_and_interactions.isStateIntegration("Slack_User_Happiness", pb_parallel_and_interaction.States.Parallel_Cheer_User_Up.Branches[0].States))
-    })
-
-    it('should throw "Error" for Task state nested in Parallel state when incorrect branch of Parallel state is used as input', () => {
-      assert.throws(() => { apb_with_parallel_and_interactions.isStateIntegration("Slack_User_Happiness", pb_parallel_and_interaction.States.Parallel_Cheer_User_Up.Branches[1].States) }, Error)
+    it('should return True for Interaction State with Parameters', () => {
+      assert.strictEqual(apb_with_parallel_and_interactions.isInteractionStateWithParameters("New_Interaction_State"), true)
     })
 
     it('should throw "Error" when State does not exist in States object', () => {
-      assert.throws(() => { apb_with_parallel_and_interactions.isStateIntegration("This_State_Does_Not_Exist") }, Error)
+      assert.throws(() => { apb_with_parallel_and_interactions.isInteractionStateWithParameters("This_State_Does_Not_Exist") }, Error)
     })
 
     it('should return false for Await state', () => {
-      assert.strictEqual(false, apb_with_parallel_and_interactions.isStateIntegration("Await_User_Response"))
+      assert.strictEqual(false, apb_with_parallel_and_interactions.isInteractionStateWithParameters("Await_User_Response"))
     })
 
     it('should return "false" for all other states states', () => {
       let testCases = ["Is_User_Happy", "User_Is_Happy", "Mark_As_Success", "Parallel_Cheer_User_Up"] // Choice, Pass, Succeed Parallel
 
-      testCases.forEach(state => assert.strictEqual(false, apb_with_parallel_and_interactions.isStateIntegration(state)))
+      testCases.forEach(state => assert.strictEqual(false, apb_with_parallel_and_interactions.isInteractionStateWithParameters(state)))
     })
 
   })
@@ -70,27 +63,28 @@ describe('apb', () => {
 
     it('should correctly generate integration task states', () => {
       let expected = {
-        helper_slack_user_for_response: {
-          "Type": "Pass",
-          "Result": {
-            "Name": "Slack_User_For_Response",
-            "Parameters": {
-              "no_text": "No",
-              "prompt_text": "Are you happy?",
-              "receiver": "Await_User_Response",
-              "target": "$.results.Validate_Username.name",
-              "target_type": "user",
-              "text": "Hi, are you happy?",
-              "yes_text": "Yes"
-            },
-          },
-          "ResultPath": "$.State_Config",
-          "Next": "Slack_User_For_Response"
-        },
 
         Slack_User_For_Response: {
           "Type": "Task",
           "Resource": "${{self:custom.slack.PromptForConfirmation}}",
+          Parameters: {
+            "artifacts.$": "$.artifacts",
+            "errors.$": "$.errors",
+            "execution_id.$": "$.execution_id",
+            "results.$": "$.results",
+            State_Config: {
+              Name: "Slack_User_For_Response",
+              Parameters: {
+                no_text: "No",
+                prompt_text: "Are you happy?",
+                receiver: "Await_User_Response",
+                target: "$.results.Validate_Username.name",
+                target_type: "user",
+                text: "Hi, are you happy?",
+                yes_text: "Yes"
+              }
+            }
+          },
           "Catch": [
             {
               "ErrorEquals": ["States.ALL"],
@@ -150,18 +144,19 @@ describe('apb', () => {
         "End_Cheer_Up": {
           "End": true,
           "Resource": "${{self.custom.jira.TransitionIssue}}",
-          "Type": "Task",
-        },
-        "helper_end_cheer_up": {
-          "Type": "Pass",
-          "Result": {
-            "Name": "End_Cheer_Up",
-            "Parameters": {
-              "status": "done"
+          Parameters: {
+            "artifacts.$": "$.artifacts",
+            "errors.$": "$.errors",
+            "execution_id.$": "$.execution_id",
+            "results.$": "$.results",
+            State_Config: {
+              Name: "End_Cheer_Up",
+              Parameters: {
+                status: "done"
+              }
             }
           },
-          "ResultPath": "$.State_Config",
-          "Next": "End_Cheer_Up"
+          "Type": "Task",
         }
       }
 
@@ -212,7 +207,7 @@ describe('apb', () => {
               "MaxAttempts": 6,
             }
           ],
-          "Next": "helper_slack_user_for_response"
+          "Next": "Slack_User_For_Response"
         }
       }
 

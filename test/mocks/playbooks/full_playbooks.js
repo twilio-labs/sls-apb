@@ -181,24 +181,35 @@ module.exports = {
     },
     expected_state_machine_socless_slack_integration_test_playbook: {
         "Comment": "Test all socless-slack lambda functions",
-        "StartAt": "helper_send_message_to_channel",
+        "StartAt": "PLAYBOOK_FORMATTER",
         "States": {
-            "helper_send_message_to_channel": {
+            "PLAYBOOK_FORMATTER": {
                 "Type": "Pass",
-                "Result": {
-                    "Name": "Send_Message_To_Channel",
-                    "Parameters": {
-                        "target": "$.artifacts.event.details.existing_channel_name",
-                        "target_type": "channel",
-                        "message_template": "Beginning SoclessSlackIntegrationTest in ${AWS::Region}"
-                    }
+                "Parameters": {
+                    "execution_id.$": "$.execution_id",
+                    "artifacts.$": "$.artifacts",
+                    "results": {},
+                    "errors": {}
                 },
-                "ResultPath": "$.State_Config",
                 "Next": "Send_Message_To_Channel"
             },
             "Send_Message_To_Channel": {
                 "Type": "Task",
                 "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${{self:functions.SendMessage.name}}",
+                "Parameters": {
+                    "execution_id.$": "$.execution_id",
+                    "artifacts.$": "$.artifacts",
+                    "errors.$": "$.errors",
+                    "results.$": "$.results",
+                    "State_Config": {
+                        "Name": "Send_Message_To_Channel",
+                        "Parameters": {
+                            "target": "$.artifacts.event.details.existing_channel_name",
+                            "target_type": "channel",
+                            "message_template": "Beginning SoclessSlackIntegrationTest in ${AWS::Region}"
+                        }
+                    }
+                },
                 "Next": "Wait_A",
                 "Retry": [
                     {
@@ -216,23 +227,24 @@ module.exports = {
             "Wait_A": {
                 "Type": "Wait",
                 "Seconds": 5,
-                "Next": "helper_set_channel_topic"
-            },
-            "helper_set_channel_topic": {
-                "Type": "Pass",
-                "Result": {
-                    "Name": "Set_Channel_Topic",
-                    "Parameters": {
-                        "channel_id": "$.results.Send_Message_To_Channel.slack_id",
-                        "topic": "set the channel topic: Our dev/null channel, you should probably mute this. Good for writing automated tests that post to Slack"
-                    }
-                },
-                "ResultPath": "$.State_Config",
                 "Next": "Set_Channel_Topic"
             },
             "Set_Channel_Topic": {
                 "Type": "Task",
                 "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${{self:functions.SetChannelTopic.name}}",
+                "Parameters": {
+                    "execution_id.$": "$.execution_id",
+                    "artifacts.$": "$.artifacts",
+                    "errors.$": "$.errors",
+                    "results.$": "$.results",
+                    "State_Config": {
+                        "Name": "Set_Channel_Topic",
+                        "Parameters": {
+                            "channel_id": "$.results.Send_Message_To_Channel.slack_id",
+                            "topic": "set the channel topic: Our dev/null channel, you should probably mute this. Good for writing automated tests that post to Slack"
+                        }
+                    }
+                },
                 "Next": "Wait_B",
                 "Retry": [
                     {
@@ -250,22 +262,23 @@ module.exports = {
             "Wait_B": {
                 "Type": "Wait",
                 "Seconds": 5,
-                "Next": "helper_find_user_via_username"
-            },
-            "helper_find_user_via_username": {
-                "Type": "Pass",
-                "Result": {
-                    "Name": "Find_User_via_Username",
-                    "Parameters": {
-                        "username": "$.artifacts.event.details.username_target"
-                    }
-                },
-                "ResultPath": "$.State_Config",
                 "Next": "Find_User_via_Username"
             },
             "Find_User_via_Username": {
                 "Type": "Task",
                 "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${{self:functions.FindUser.name}}",
+                "Parameters": {
+                    "execution_id.$": "$.execution_id",
+                    "artifacts.$": "$.artifacts",
+                    "errors.$": "$.errors",
+                    "results.$": "$.results",
+                    "State_Config": {
+                        "Name": "Find_User_via_Username",
+                        "Parameters": {
+                            "username": "$.artifacts.event.details.username_target"
+                        }
+                    }
+                },
                 "Next": "Was_User_Found_via_Username",
                 "Retry": [
                     {
@@ -286,7 +299,7 @@ module.exports = {
                     {
                         "Variable": "$.results.result",
                         "StringEquals": "true",
-                        "Next": "helper_find_user_via_slack_id"
+                        "Next": "Find_User_via_Slack_ID"
                     },
                     {
                         "Variable": "$.results.result",
@@ -295,20 +308,21 @@ module.exports = {
                     }
                 ]
             },
-            "helper_find_user_via_slack_id": {
-                "Type": "Pass",
-                "Result": {
-                    "Name": "Find_User_via_Slack_ID",
-                    "Parameters": {
-                        "slack_id": "$.results.Find_User_via_Username.id"
-                    }
-                },
-                "ResultPath": "$.State_Config",
-                "Next": "Find_User_via_Slack_ID"
-            },
             "Find_User_via_Slack_ID": {
                 "Type": "Task",
                 "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${{self:functions.FindUser.name}}",
+                "Parameters": {
+                    "execution_id.$": "$.execution_id",
+                    "artifacts.$": "$.artifacts",
+                    "errors.$": "$.errors",
+                    "results.$": "$.results",
+                    "State_Config": {
+                        "Name": "Find_User_via_Slack_ID",
+                        "Parameters": {
+                            "slack_id": "$.results.Find_User_via_Username.id"
+                        }
+                    }
+                },
                 "Next": "Was_User_Found_via_Slack_ID",
                 "Retry": [
                     {
@@ -329,7 +343,7 @@ module.exports = {
                     {
                         "Variable": "$.results.result",
                         "StringEquals": "true",
-                        "Next": "helper_check_user_in_channel"
+                        "Next": "Check_User_In_Channel"
                     },
                     {
                         "Variable": "$.results.result",
@@ -338,21 +352,22 @@ module.exports = {
                     }
                 ]
             },
-            "helper_check_user_in_channel": {
-                "Type": "Pass",
-                "Result": {
-                    "Name": "Check_User_In_Channel",
-                    "Parameters": {
-                        "target_channel_id": "$.results.Send_Message_To_Channel.slack_id",
-                        "user_id": "$.results.Find_User_via_Slack_ID.id"
-                    }
-                },
-                "ResultPath": "$.State_Config",
-                "Next": "Check_User_In_Channel"
-            },
             "Check_User_In_Channel": {
                 "Type": "Task",
                 "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${{self:functions.CheckIfUserInChannel.name}}",
+                "Parameters": {
+                    "execution_id.$": "$.execution_id",
+                    "artifacts.$": "$.artifacts",
+                    "errors.$": "$.errors",
+                    "results.$": "$.results",
+                    "State_Config": {
+                        "Name": "Check_User_In_Channel",
+                        "Parameters": {
+                            "target_channel_id": "$.results.Send_Message_To_Channel.slack_id",
+                            "user_id": "$.results.Find_User_via_Slack_ID.id"
+                        }
+                    }
+                },
                 "Next": "Was_User_In_Channel",
                 "Retry": [
                     {
@@ -373,7 +388,7 @@ module.exports = {
                     {
                         "Variable": "$.results.ok",
                         "BooleanEquals": true,
-                        "Next": "helper_send_message_dm"
+                        "Next": "Send_Message_DM"
                     },
                     {
                         "Variable": "$.results.result",
@@ -382,22 +397,23 @@ module.exports = {
                     }
                 ]
             },
-            "helper_send_message_dm": {
-                "Type": "Pass",
-                "Result": {
-                    "Name": "Send_Message_DM",
-                    "Parameters": {
-                        "target": "$.artifacts.event.details.username_target",
-                        "target_type": "user",
-                        "message_template": "Hello from SoclessSlackIntegrationTest in ${AWS::Region}"
-                    }
-                },
-                "ResultPath": "$.State_Config",
-                "Next": "Send_Message_DM"
-            },
             "Send_Message_DM": {
                 "Type": "Task",
                 "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${{self:functions.SendMessage.name}}",
+                "Parameters": {
+                    "execution_id.$": "$.execution_id",
+                    "artifacts.$": "$.artifacts",
+                    "errors.$": "$.errors",
+                    "results.$": "$.results",
+                    "State_Config": {
+                        "Name": "Send_Message_DM",
+                        "Parameters": {
+                            "target": "$.artifacts.event.details.username_target",
+                            "target_type": "user",
+                            "message_template": "Hello from SoclessSlackIntegrationTest in ${AWS::Region}"
+                        }
+                    }
+                },
                 "Next": "Wait_C",
                 "Retry": [
                     {
@@ -501,10 +517,10 @@ module.exports = {
                             "States.Timeout"
                         ],
                         "ResultPath": "$.errors.Slack_User_For_Return_Date",
-                        "Next": "helper_close_investigation"
+                        "Next": "Close_Investigation"
                     }
                 ],
-                "Next": "helper_close_investigation",
+                "Next": "Close_Investigation",
                 "Retry": [
                     {
                         "ErrorEquals": [
@@ -521,21 +537,22 @@ module.exports = {
             "FAILED_TEST": {
                 "Type": "Fail"
             },
-            "helper_close_investigation": {
-                "Type": "Pass",
-                "Result": {
-                    "Name": "Close_Investigation",
-                    "Parameters": {
-                        "investigation_id": "$.artifacts.event.investigation_id",
-                        "status": "closed"
-                    }
-                },
-                "ResultPath": "$.State_Config",
-                "Next": "Close_Investigation"
-            },
             "Close_Investigation": {
                 "Type": "Task",
                 "Resource": "${{self:custom.core.SetInvestigationStatus}}",
+                "Parameters": {
+                    "execution_id.$": "$.execution_id",
+                    "artifacts.$": "$.artifacts",
+                    "errors.$": "$.errors",
+                    "results.$": "$.results",
+                    "State_Config": {
+                        "Name": "Close_Investigation",
+                        "Parameters": {
+                            "investigation_id": "$.artifacts.event.investigation_id",
+                            "status": "closed"
+                        }
+                    }
+                },
                 "End": true,
                 "Retry": [
                     {

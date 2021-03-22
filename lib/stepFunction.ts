@@ -1,6 +1,6 @@
 export interface StepFunction {
     StartAt: string;
-    States: Record<string, State>;
+    States: Record<string, State| any>;
     Playbook?: string;
     Comment?: string;
 }
