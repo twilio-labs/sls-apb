@@ -151,12 +151,7 @@ var apb = /** @class */ (function () {
     };
     apb.prototype.resolveStateName = function (stateName, States) {
         if (States === void 0) { States = this.States; }
-        if (this.isInteractionStateWithParameters(stateName, States)) {
-            return this.genIntegrationHelperStateName(stateName);
-        }
-        else {
-            return stateName;
-        }
+        return stateName;
     };
     //* ATTRIBUTE TRANSFORMS /////////////////////////////////////////////////////
     apb.prototype.transformCatchConfig = function (catchConfig, States) {
@@ -217,17 +212,16 @@ var apb = /** @class */ (function () {
         return parameters;
     };
     //! Interactions still need helper states ):
-    // generateParametersForSoclessInteraction(state_name: string, handle_state_kwargs: Record<string, any>, function_name: string){
-    //   const parameters : SoclessInteractionStepParameters = {
-    //     FunctionName: function_name,
-    //     Payload: {
-    //       "sfn_context.$" : "$",
-    //       "task_token.$": "$$.Task.Token",
-    //       ...this.generateParametersForSoclessTask(state_name, handle_state_kwargs),
-    //     },
-    //   }
-    //   return parameters
-    // }
+    apb.prototype.generateParametersForSoclessInteraction = function (state_name, handle_state_kwargs, function_name) {
+        var parameters = {
+            FunctionName: function_name,
+            Payload: {
+                "sfn_context": this.generateParametersForSoclessTask(state_name, handle_state_kwargs),
+                "task_token.$": "$$.Task.Token",
+            },
+        };
+        return parameters;
+    };
     apb.prototype.transformTaskState = function (stateName, stateConfig, States, DecoratorFlags) {
         var _a;
         var output = {};
@@ -257,7 +251,7 @@ var apb = /** @class */ (function () {
         return output;
     };
     apb.prototype.transformInteractionState = function (stateName, stateConfig, States, DecoratorFlags) {
-        var _a, _b;
+        var _a;
         var output = {};
         var newConfig = Object.assign({}, stateConfig);
         if (!!stateConfig['Next']) {
@@ -277,25 +271,10 @@ var apb = /** @class */ (function () {
             var handlerCatchConfig = [this.genTaskFailureHandlerCatchConfig(stateName)];
             newConfig.Catch = __spreadArray(__spreadArray([], currentCatchConfig), handlerCatchConfig);
         }
-        if (this.isInteractionStateWithParameters(stateName, States)) {
-            // Generate helper state and set Invoke lambda resource
-            var helperState = this.genHelperState(stateConfig, stateName);
-            var helperStateName = this.genIntegrationHelperStateName(stateName);
-            Object.assign(output, (_a = {}, _a[helperStateName] = helperState, _a));
-        }
-        // Convert Interaction to Task
-        newConfig.Parameters = {
-            FunctionName: newConfig.Resource,
-            Payload: {
-                "sfn_context.$": "$",
-                "task_token.$": "$$.Task.Token"
-            }
-        };
-        //! Interactions still need helper states ):
-        // newConfig.Parameters = this.generateParametersForSoclessInteraction(stateName, newConfig.Parameters, newConfig.Resource)
+        newConfig.Parameters = this.generateParametersForSoclessInteraction(stateName, newConfig.Parameters, newConfig.Resource);
         newConfig.Resource = "arn:aws:states:::lambda:invoke.waitForTaskToken";
         newConfig.Type = "Task";
-        Object.assign(output, (_b = {}, _b[stateName] = newConfig, _b));
+        Object.assign(output, (_a = {}, _a[stateName] = newConfig, _a));
         return output;
     };
     apb.prototype.transformParallelState = function (stateName, stateConfig, States, DecoratorFlags) {

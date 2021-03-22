@@ -36,16 +36,7 @@ export interface SoclessTaskStepParameters {
 export interface SoclessInteractionStepParameters {
     FunctionName: string; // AWS Lambda Resource
     Payload: {
-        "sfn_context.$" : "$",
+        "sfn_context.$" : SoclessTaskStepParameters,
         "task_token.$": "$$.Task.Token",
-        // SoclessTaskStepParameters
-        "execution_id.$" : "$.execution_id";
-        "artifacts.$" : "$.artifacts";
-        "errors.$" : "$.errors";
-        "results.$" : "$.results";
-        "State_Config" : {
-            "Name" : string,
-            "Parameters" : Record<string, any>,
-        };
     };
 }

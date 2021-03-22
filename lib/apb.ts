@@ -160,11 +160,7 @@ export class apb {
   }
 
   resolveStateName(stateName: string, States = this.States) {
-    if (this.isInteractionStateWithParameters(stateName, States)) {
-      return this.genIntegrationHelperStateName(stateName)
-    } else {
-      return stateName
-    }
+    return stateName
   }
 
   //* ATTRIBUTE TRANSFORMS /////////////////////////////////////////////////////
@@ -231,17 +227,16 @@ export class apb {
   }
 
   //! Interactions still need helper states ):
-  // generateParametersForSoclessInteraction(state_name: string, handle_state_kwargs: Record<string, any>, function_name: string){
-  //   const parameters : SoclessInteractionStepParameters = {
-  //     FunctionName: function_name,
-  //     Payload: {
-  //       "sfn_context.$" : "$",
-  //       "task_token.$": "$$.Task.Token",
-  //       ...this.generateParametersForSoclessTask(state_name, handle_state_kwargs),
-  //     },
-  //   }
-  //   return parameters
-  // }
+  generateParametersForSoclessInteraction(state_name: string, handle_state_kwargs: Record<string, any>, function_name: string){
+    const parameters = {
+      FunctionName: function_name,
+      Payload: {
+        "sfn_context" : this.generateParametersForSoclessTask(state_name, handle_state_kwargs),
+        "task_token.$": "$$.Task.Token",
+      },
+    }
+    return parameters
+  }
 
   transformTaskState(stateName: string, stateConfig, States, DecoratorFlags) {
     let output = {}
@@ -300,23 +295,7 @@ export class apb {
       newConfig.Catch = [...currentCatchConfig, ...handlerCatchConfig]
     }
 
-    if (this.isInteractionStateWithParameters(stateName, States)) {
-      // Generate helper state and set Invoke lambda resource
-      const helperState = this.genHelperState(stateConfig, stateName)
-      let helperStateName = this.genIntegrationHelperStateName(stateName)
-      Object.assign(output, { [helperStateName]: helperState })
-    }
-
-    // Convert Interaction to Task
-    newConfig.Parameters = {
-      FunctionName: newConfig.Resource,
-      Payload: {
-        "sfn_context.$": "$",
-        "task_token.$": "$$.Task.Token"
-      }
-    }
-    //! Interactions still need helper states ):
-    // newConfig.Parameters = this.generateParametersForSoclessInteraction(stateName, newConfig.Parameters, newConfig.Resource)
+    newConfig.Parameters = this.generateParametersForSoclessInteraction(stateName, newConfig.Parameters, newConfig.Resource)
     newConfig.Resource = "arn:aws:states:::lambda:invoke.waitForTaskToken"
     newConfig.Type = "Task"
 

@@ -431,20 +431,6 @@ module.exports = {
             "Wait_C": {
                 "Type": "Wait",
                 "Seconds": 5,
-                "Next": "helper_prompt_for_confirmation"
-            },
-            "helper_prompt_for_confirmation": {
-                "Type": "Pass",
-                "Result": {
-                    "Name": "Prompt_For_Confirmation",
-                    "Parameters": {
-                        "prompt_text": "Tesing PromptForConfirmation",
-                        "text": "This will timeout in 30 seconds and advance to next step in test",
-                        "target": "$.artifacts.event.details.existing_channel_id",
-                        "target_type": "slack_id"
-                    }
-                },
-                "ResultPath": "$.State_Config",
                 "Next": "Prompt_For_Confirmation"
             },
             "Prompt_For_Confirmation": {
@@ -453,9 +439,23 @@ module.exports = {
                 "Parameters": {
                     "FunctionName": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${{self:functions.PromptForConfirmation.name}}",
                     "Payload": {
-                        "sfn_context.$": "$",
-                        "task_token.$": "$$.Task.Token"
-                    }
+                        "task_token.$": "$$.Task.Token",
+                        "sfn_context": {
+                            "artifacts.$": "$.artifacts",
+                            "errors.$": "$.errors",
+                            "execution_id.$": "$.execution_id",
+                            "results.$": "$.results",
+                            "State_Config": {
+                                "Name": "Prompt_For_Confirmation",
+                                "Parameters": {
+                                    "prompt_text": "Tesing PromptForConfirmation",
+                                    "target": "$.artifacts.event.details.existing_channel_id",
+                                    "target_type": "slack_id",
+                                    "text": "This will timeout in 30 seconds and advance to next step in test"
+                                }
+                            }
+                        }
+                    },
                 },
                 "TimeoutSeconds": 40,
                 "Catch": [
@@ -484,20 +484,6 @@ module.exports = {
             "Wait_D": {
                 "Type": "Wait",
                 "Seconds": 5,
-                "Next": "helper_prompt_for_response"
-            },
-            "helper_prompt_for_response": {
-                "Type": "Pass",
-                "Result": {
-                    "Name": "Prompt_For_Response",
-                    "Parameters": {
-                        "message_template": "Testing PromptForConfirmation \n This will timeout in 30 seconds and advance to next step in test",
-                        "target": "$.artifacts.event.details.existing_channel_id",
-                        "target_type": "slack_id",
-                        "response_desc": "mm-dd-yyyy"
-                    }
-                },
-                "ResultPath": "$.State_Config",
                 "Next": "Prompt_For_Response"
             },
             "Prompt_For_Response": {
@@ -506,9 +492,23 @@ module.exports = {
                 "Parameters": {
                     "FunctionName": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:${{self:functions.PromptForResponse.name}}",
                     "Payload": {
-                        "sfn_context.$": "$",
-                        "task_token.$": "$$.Task.Token"
-                    }
+                        "task_token.$": "$$.Task.Token",
+                        sfn_context: {
+                            "artifacts.$": "$.artifacts",
+                            "errors.$": "$.errors",
+                            "execution_id.$": "$.execution_id",
+                            "results.$": "$.results",
+                            State_Config: {
+                                "Name": "Prompt_For_Response",
+                                "Parameters": {
+                                    "message_template": "Testing PromptForConfirmation \n This will timeout in 30 seconds and advance to next step in test",
+                                    "target": "$.artifacts.event.details.existing_channel_id",
+                                    "target_type": "slack_id",
+                                    "response_desc": "mm-dd-yyyy"
+                                }
+                            }
+                        }
+                    },
                 },
                 "TimeoutSeconds": 40,
                 "Catch": [

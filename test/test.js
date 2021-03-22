@@ -168,32 +168,33 @@ describe('apb', () => {
   describe('#transformInteractionState', () => {
     it('should correctly generate an Interaction task state', () => {
       let expected = {
-        helper_new_interaction_state: {
-          "Type": "Pass",
-          "Result": {
-            "Name": "New_Interaction_State",
-            "Parameters": {
-              "no_text": "No",
-              "prompt_text": "Are you happy?",
-              "receiver": "Slack_User_For_Response",
-              "target": "$.results.Validate_Username.name",
-              "target_type": "user",
-              "text": "Hi, are you happy?",
-              "yes_text": "Yes"
-            },
-          },
-          "ResultPath": "$.State_Config",
-          "Next": "New_Interaction_State"
-        },
         New_Interaction_State: {
           "Type": "Task",
           "Resource": "arn:aws:states:::lambda:invoke.waitForTaskToken",
           "Parameters": {
-            "FunctionName": "${{self:custom.slack.PromptForConfirmation}}",
-            "Payload": {
-              "sfn_context.$": "$",
-              "task_token.$": "$$.Task.Token"
-            }
+            FunctionName: '${{self:custom.slack.PromptForConfirmation}}',
+            Payload: {
+              'task_token.$': '$$.Task.Token',
+              sfn_context: {
+                'artifacts.$': '$.artifacts',
+                'errors.$': '$.errors',
+                'execution_id.$': '$.execution_id',
+                'results.$': '$.results',
+                State_Config: {
+                  Name: 'New_Interaction_State',
+                  Parameters: {
+                    no_text: 'No',
+                    prompt_text: 'Are you happy?',
+                    receiver: 'Slack_User_For_Response',
+                    target: '$.results.Validate_Username.name',
+                    target_type: 'user',
+                    text: 'Hi, are you happy?',
+                    yes_text: 'Yes'
+                  }
+                }
+              }
+            
+          },
           },
           "Retry": [
             {
