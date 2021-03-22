@@ -2,9 +2,10 @@
   "name": "sls-apb",
   "version": "1.0.0",
   "description": "Serverless plugin for Socless Playbook Builder",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "test": "./node_modules/.bin/mocha"
+    "build": "tsc",
+    "test": "tsc && ./node_modules/.bin/mocha"
   },
   "keywords": [
     "socless",
@@ -14,9 +15,10 @@
   "author": "Ubani Balogun",
   "license": "ISC",
   "dependencies": {
-    "fs-extra": "^9.0.1"
+    "fs-extra": "^9.1.0"
   },
   "devDependencies": {
-    "mocha": "^8.2.1"
+    "mocha": "^8.2.1",
+    "typescript": "^4.2.2"
   }
 }

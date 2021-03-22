@@ -1,29 +1,96 @@
-const { PARSE_SELF_NAME, DEFAULT_RETRY, DECORATOR_FLAGS } = require('./constants')
+import { StepFunction, State, TaskState, InteractionState } from "./stepFunction";
+import { HelperState, PlaybookDefinition } from "./socless_psuedo_states";
+import { PARSE_SELF_NAME, DEFAULT_RETRY, DECORATOR_FLAGS } from './constants'
+import { PlaybookValidationError } from "./errors";
 
 const parse_self_pattern = new RegExp(`(\\"${PARSE_SELF_NAME}\\()(.*)(\\)\\")`, 'g')
 
-class apb {
+export class apb {
 
-  constructor(definition, apb_config = {}) {
-    this.DecoratorFlags = DECORATOR_FLAGS
+  apb_config: any;
+  DecoratorFlags : any;
+  States : Record<string, State>;
+  StateMachine? : StepFunction
+  Decorators : Record<string, any>;
+  PlaybookName : string
+  StateMachineYaml : Object
+
+  constructor(definition: PlaybookDefinition, apb_config = {}) {
+    this.validateTopLevelKeys(definition)
+    
     this.apb_config = apb_config;
+    this.DecoratorFlags = {
+      hasTaskFailureHandler: false,
+      ...DECORATOR_FLAGS}
 
-    this.StateMachine = {}      // Post-SOCless Step Functions State Machine dictionary
-    this.StateMachineYaml = {} // Post-SOCless Cloudformation Yaml 
+    const { Playbook, States, Decorators, StartAt, Comment, ...topLevel } = definition
+    this.Decorators = Decorators || {}
+    this.PlaybookName = Playbook
+    this.States = States
 
-    this.transformStateMachine(definition)
+    // Check for TaskFailureHandler Decorator and modify this.States accordingly
+    if (this.Decorators) {
+      if (this.taskErrorHandlerExists()) {
+        this.DecoratorFlags.hasTaskFailureHandler = true
+        Object.assign(this.States, this.genTaskFailureHandlerStates(this.Decorators.TaskFailureHandler))
+      } else {
+        this.DecoratorFlags.hasTaskFailureHandler = false
+      }
+    }
+
+    // build resolved state machine from socless states
+    this.StateMachine = {
+      ...topLevel,
+      Comment,
+      StartAt: this.resolveStateName(StartAt),
+      States: this.transformStates(),
+    }
+
+    // build finalized yaml output
+    this.StateMachineYaml = {
+      Resources: {
+        [this.PlaybookName]: {
+          Type: "AWS::StepFunctions::StateMachine",
+          Properties: {
+            RoleArn: "${{cf:socless-${{self:provider.stage}}.StatesExecutionRoleArn}}",
+            StateMachineName: this.PlaybookName,
+            DefinitionString: {
+              "Fn::Sub": JSON.stringify(this.StateMachine, null, 4).replace(parse_self_pattern, "$2")
+            },
+            ...this.buildLoggingConfiguration()
+          }
+        }
+      },
+      Outputs: {
+        [this.PlaybookName]: {
+          Description: Comment,
+          Value: {
+            Ref: this.PlaybookName
+          }
+        }
+      }
+    }
+  
+  }
+
+  validateTopLevelKeys(definition: PlaybookDefinition) {
+    const REQUIRED_FIELDS = ['Playbook', 'Comment', 'StartAt', 'States']
+    REQUIRED_FIELDS.forEach(key => {
+      if (!definition[key]) throw new PlaybookValidationError(`Playbook definition does not have the required top-level key, '${key}'`)
+    })
   }
 
   //* BOOLEAN CHECKS & Validators /////////////////////////////////////////////////////
 
-  isStateIntegration(stateName, States = this.States) {
+  isStateIntegration(stateName: string, States = this.States) {
     if (States[stateName] === undefined) {
       throw new Error(`State ${stateName} does not exist in the States object`)
     }
-    return ((States[stateName].Type === "Task" || States[stateName].Type === "Interaction") && !!States[stateName]['Parameters'])
+    const state_to_check : State | TaskState | InteractionState = States[stateName]
+    return ((state_to_check.Type === "Task" || state_to_check.Type === "Interaction") && !!state_to_check['Parameters'])
   }
 
-  isDefaultRetryDisabled(stateName) {
+  isDefaultRetryDisabled(stateName: string) {
     if (this.Decorators.DisableDefaultRetry) {
       const disable = this.Decorators.DisableDefaultRetry
       return disable.all || (disable.tasks && disable.tasks.includes(stateName))
@@ -32,19 +99,12 @@ class apb {
     }
   }
 
-  validateTaskFailureHandlerDecorator(config) {
+  validateTaskFailureHandlerDecorator(config: any) {
     if (config.Type === "Task" || config.Type === "Parallel") {
       return true
     } else {
       throw new Error("Decorator.TaskFailureHandler configured incorrectly. Must be a Task or Parallel state")
     }
-  }
-
-  validateDefinition(definition) {
-    const REQUIRED_FIELDS = ['Playbook', 'Comment', 'StartAt', 'States']
-    REQUIRED_FIELDS.forEach(key => {
-      if (!definition[key]) throw new Error(`Playbook definition does not have the required top-level key, '${key}'`)
-    })
   }
 
   taskErrorHandlerExists() {
@@ -53,11 +113,11 @@ class apb {
 
   //* STATE GENERATIONS /////////////////////////////////////////////////////
 
-  genIntegrationHelperStateName(originalName) {
+  genIntegrationHelperStateName(originalName: string) {
     return `helper_${originalName.toLowerCase()}`.slice(0, 128)
   }
 
-  genTaskFailureHandlerCatchConfig(stateName) {
+  genTaskFailureHandlerCatchConfig(stateName: string) {
     return {
       "ErrorEquals": ["States.TaskFailed"],
       "ResultPath": `$.errors.${stateName}`,
@@ -65,7 +125,7 @@ class apb {
     }
   }
 
-  genHelperState(stateConfig, stateName) {
+  genHelperState(stateConfig: any, stateName: string) {
     return {
       Type: "Pass",
       Result: {
@@ -77,7 +137,7 @@ class apb {
     }
   }
 
-  genTaskFailureHandlerStates(TaskFailureHandler) {
+  genTaskFailureHandlerStates(TaskFailureHandler: any) {
     delete TaskFailureHandler.End
     TaskFailureHandler.Next = this.DecoratorFlags.TaskFailureHandlerEndLabel
 
@@ -93,7 +153,7 @@ class apb {
     }
   }
 
-  resolveStateName(stateName, States = this.States) {
+  resolveStateName(stateName: string, States = this.States) {
     if (this.isStateIntegration(stateName, States)) {
       return this.genIntegrationHelperStateName(stateName)
     } else {
@@ -103,14 +163,14 @@ class apb {
 
   //* ATTRIBUTE TRANSFORMS /////////////////////////////////////////////////////
 
-  transformCatchConfig(catchConfig, States) {
+  transformCatchConfig(catchConfig: any, States: Record<string, State>) {
     const catches = catchConfig.map(catchState =>
       Object.assign({}, catchState, { Next: this.resolveStateName(catchState.Next, States) })
     )
     return catches
   }
 
-  transformRetryConfig(retryConfig, stateName) {
+  transformRetryConfig(retryConfig: any, stateName: string) {
     const currentStepDefaultRetry = JSON.parse(JSON.stringify(DEFAULT_RETRY)); // deepcopy
 
     const retries = retryConfig.map(retryState => {
@@ -141,7 +201,7 @@ class apb {
   }
 
   transformChoiceState(stateName, stateConfig, States = this.States) {
-    let choices = []
+    let choices: any[] = []
     stateConfig.Choices.forEach(choice => {
       choices.push(Object.assign({}, choice, { Next: this.resolveStateName(choice.Next, States) }))
     })
@@ -150,7 +210,7 @@ class apb {
     }
   }
 
-  transformTaskState(stateName, stateConfig, States, DecoratorFlags) {
+  transformTaskState(stateName: string, stateConfig, States, DecoratorFlags) {
     let output = {}
     let newConfig = Object.assign({}, stateConfig)
     if (!!stateConfig['Next']) {
@@ -235,9 +295,10 @@ class apb {
     let Output = {}
     let { Branches, End, ...topLevel } = stateConfig
     let helperStateName = `merge_${stateName.toLowerCase()}`.slice(0, 128)
-    let helperState = {
+    let helperState: HelperState = {
       Type: "Task",
-      Resource: "${{self:custom.core.MergeParallelOutput}}"
+      Resource: "${{self:custom.core.MergeParallelOutput}}",
+      Catch: []
     }
 
     if (DecoratorFlags.hasTaskFailureHandler === true && stateName !== this.DecoratorFlags.TaskFailureHandlerName) {
@@ -322,52 +383,4 @@ class apb {
     return this.apb_config.logging ? logs_enabled : logs_disabled;
   }
 
-  transformStateMachine(definition) {
-    this.validateDefinition(definition)
-    let { Playbook, States, Decorators, ...topLevel } = definition
-
-    this.Decorators = Decorators || {}
-
-    if (this.Decorators) {
-      // Check for TaskFailureHandler Decorator and modify 'States' accordingly
-      if (this.taskErrorHandlerExists()) {
-        this.DecoratorFlags.hasTaskFailureHandler = true
-        Object.assign(States, this.genTaskFailureHandlerStates(this.Decorators.TaskFailureHandler))
-      } else {
-        this.DecoratorFlags.hasTaskFailureHandler = false
-      }
-    }
-
-    this.States = States
-    this.PlaybookName = Playbook
-
-    Object.assign(this.StateMachine, topLevel, { States: this.transformStates(), StartAt: this.resolveStateName(topLevel.StartAt) })
-
-    this.StateMachineYaml = {
-      Resources: {
-        [this.PlaybookName]: {
-          Type: "AWS::StepFunctions::StateMachine",
-          Properties: {
-            RoleArn: "${{cf:socless-${{self:provider.stage}}.StatesExecutionRoleArn}}",
-            StateMachineName: this.PlaybookName,
-            DefinitionString: {
-              "Fn::Sub": JSON.stringify(this.StateMachine, null, 4).replace(parse_self_pattern, "$2")
-            },
-            ...this.buildLoggingConfiguration()
-          }
-        }
-      },
-      Outputs: {
-        [this.PlaybookName]: {
-          Description: topLevel.Comment,
-          Value: {
-            Ref: this.PlaybookName
-          }
-        }
-      }
-    }
-  }
 }
-
-
-module.exports = apb
