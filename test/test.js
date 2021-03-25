@@ -36,29 +36,6 @@ describe('apb', () => {
   })
 
 
-  describe('#isInteractionStateWithParameters', () => {
-
-    it('should return True for Interaction State with Parameters', () => {
-      assert.strictEqual(apb_with_parallel_and_interactions.isInteractionStateWithParameters("New_Interaction_State"), true)
-    })
-
-    it('should throw "Error" when State does not exist in States object', () => {
-      assert.throws(() => { apb_with_parallel_and_interactions.isInteractionStateWithParameters("This_State_Does_Not_Exist") }, Error)
-    })
-
-    it('should return false for Await state', () => {
-      assert.strictEqual(false, apb_with_parallel_and_interactions.isInteractionStateWithParameters("Await_User_Response"))
-    })
-
-    it('should return "false" for all other states states', () => {
-      let testCases = ["Is_User_Happy", "User_Is_Happy", "Mark_As_Success", "Parallel_Cheer_User_Up"] // Choice, Pass, Succeed Parallel
-
-      testCases.forEach(state => assert.strictEqual(false, apb_with_parallel_and_interactions.isInteractionStateWithParameters(state)))
-    })
-
-  })
-
-
   describe('#transformTaskState', () => {
 
     it('should correctly generate integration task states', () => {

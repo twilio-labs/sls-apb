@@ -83,15 +83,6 @@ var apb = /** @class */ (function () {
         });
     };
     //* BOOLEAN CHECKS & Validators /////////////////////////////////////////////////////
-    apb.prototype.isInteractionStateWithParameters = function (stateName, States) {
-        if (States === void 0) { States = this.States; }
-        if (States[stateName] === undefined) {
-            throw new Error("State " + stateName + " does not exist in the States object");
-        }
-        var state_to_check = States[stateName];
-        // return ((state_to_check.Type === "Task" || state_to_check.Type === "Interaction") && !!state_to_check['Parameters'])
-        return (state_to_check.Type === "Interaction" && !!state_to_check['Parameters']);
-    };
     apb.prototype.isDefaultRetryDisabled = function (stateName) {
         if (this.Decorators.DisableDefaultRetry) {
             var disable = this.Decorators.DisableDefaultRetry;
@@ -211,7 +202,6 @@ var apb = /** @class */ (function () {
         };
         return parameters;
     };
-    //! Interactions still need helper states ):
     apb.prototype.generateParametersForSoclessInteraction = function (state_name, handle_state_kwargs, function_name) {
         var parameters = {
             FunctionName: function_name,
