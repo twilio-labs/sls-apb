@@ -1,6 +1,6 @@
 import { StepFunction, State, TaskState, InteractionState } from "./stepFunction";
-import { HelperState, PlaybookDefinition } from "./socless_psuedo_states";
-import { PARSE_SELF_NAME, DEFAULT_RETRY, DECORATOR_FLAGS } from './constants'
+import { HelperState, PlaybookDefinition, SoclessInteractionStepParameters, SoclessTaskStepParameters } from "./socless_psuedo_states";
+import { PARSE_SELF_NAME, DEFAULT_RETRY, DECORATOR_FLAGS, PLAYBOOK_FORMATTER_STEP_NAME } from './constants'
 import { PlaybookValidationError } from "./errors";
 
 const parse_self_pattern = new RegExp(`(\\"${PARSE_SELF_NAME}\\()(.*)(\\)\\")`, 'g')
@@ -38,12 +38,17 @@ export class apb {
       }
     }
 
+    const starting_step = this.generate_playbook_start_step(StartAt)
+
     // build resolved state machine from socless states
     this.StateMachine = {
       ...topLevel,
       Comment,
-      StartAt: this.resolveStateName(StartAt),
-      States: this.transformStates(),
+      StartAt: PLAYBOOK_FORMATTER_STEP_NAME,
+      States: {
+        ...starting_step,
+        ...this.transformStates()
+      },
     }
 
     // build finalized yaml output
@@ -81,14 +86,6 @@ export class apb {
   }
 
   //* BOOLEAN CHECKS & Validators /////////////////////////////////////////////////////
-
-  isStateIntegration(stateName: string, States = this.States) {
-    if (States[stateName] === undefined) {
-      throw new Error(`State ${stateName} does not exist in the States object`)
-    }
-    const state_to_check : State | TaskState | InteractionState = States[stateName]
-    return ((state_to_check.Type === "Task" || state_to_check.Type === "Interaction") && !!state_to_check['Parameters'])
-  }
 
   isDefaultRetryDisabled(stateName: string) {
     if (this.Decorators.DisableDefaultRetry) {
@@ -154,11 +151,7 @@ export class apb {
   }
 
   resolveStateName(stateName: string, States = this.States) {
-    if (this.isStateIntegration(stateName, States)) {
-      return this.genIntegrationHelperStateName(stateName)
-    } else {
-      return stateName
-    }
+    return stateName
   }
 
   //* ATTRIBUTE TRANSFORMS /////////////////////////////////////////////////////
@@ -210,19 +203,44 @@ export class apb {
     }
   }
 
+  generateParametersForSoclessTask(state_name: string, handle_state_kwargs: Record<string, any>){
+    const parameters : SoclessTaskStepParameters = {
+      "execution_id.$" : "$.execution_id",
+      "artifacts.$" : "$.artifacts",
+      "errors.$" : "$.errors",
+      "results.$" : "$.results",
+      "State_Config" : {
+        "Name" : state_name,
+        "Parameters" : handle_state_kwargs
+      },
+    }
+    return parameters
+  }
+
+  generateParametersForSoclessInteraction(state_name: string, handle_state_kwargs: Record<string, any>, function_name: string){
+    const parameters = {
+      FunctionName: function_name,
+      Payload: {
+        "sfn_context" : this.generateParametersForSoclessTask(state_name, handle_state_kwargs),
+        "task_token.$": "$$.Task.Token",
+      },
+    }
+    return parameters
+  }
+
   transformTaskState(stateName: string, stateConfig, States, DecoratorFlags) {
     let output = {}
     let newConfig = Object.assign({}, stateConfig)
-    if (!!stateConfig['Next']) {
-      Object.assign(newConfig, { Next: this.resolveStateName(stateConfig.Next, States) })
+    if (!!newConfig['Next']) {
+      Object.assign(newConfig, { Next: this.resolveStateName(newConfig.Next, States) })
     }
 
-    if (!!stateConfig['Catch']) {
-      Object.assign(newConfig, { Catch: this.transformCatchConfig(stateConfig.Catch, States) })
+    if (!!newConfig['Catch']) {
+      Object.assign(newConfig, { Catch: this.transformCatchConfig(newConfig.Catch, States) })
     }
 
-    if (!!stateConfig['Retry']) {
-      Object.assign(newConfig, { Retry: this.transformRetryConfig(stateConfig.Retry, stateName) })
+    if (!!newConfig['Retry']) {
+      Object.assign(newConfig, { Retry: this.transformRetryConfig(newConfig.Retry, stateName) })
     } else if (!this.isDefaultRetryDisabled(stateName)) {
       Object.assign(newConfig, { "Retry": [DEFAULT_RETRY] })
     }
@@ -233,14 +251,12 @@ export class apb {
       newConfig.Catch = [...currentCatchConfig, ...handlerCatchConfig]
     }
 
-    if (this.isStateIntegration(stateName, States)) {
-      // Generate helper state
-      const helperState = this.genHelperState(stateConfig, stateName)
-      let helperStateName = this.genIntegrationHelperStateName(stateName)
-      Object.assign(output, { [helperStateName]: helperState })
+    const handle_state_parameters = newConfig.Parameters
+    if (handle_state_parameters) {
+      newConfig.Parameters = this.generateParametersForSoclessTask(stateName, handle_state_parameters)
     }
 
-    delete newConfig['Parameters']
+
     Object.assign(output, { [stateName]: newConfig })
     return output
   }
@@ -269,21 +285,7 @@ export class apb {
       newConfig.Catch = [...currentCatchConfig, ...handlerCatchConfig]
     }
 
-    if (this.isStateIntegration(stateName, States)) {
-      // Generate helper state and set Invoke lambda resource
-      const helperState = this.genHelperState(stateConfig, stateName)
-      let helperStateName = this.genIntegrationHelperStateName(stateName)
-      Object.assign(output, { [helperStateName]: helperState })
-    }
-
-    // Convert Interaction to Task
-    newConfig.Parameters = {
-      FunctionName: newConfig.Resource,
-      Payload: {
-        "sfn_context.$": "$",
-        "task_token.$": "$$.Task.Token"
-      }
-    }
+    newConfig.Parameters = this.generateParametersForSoclessInteraction(stateName, newConfig.Parameters, newConfig.Resource)
     newConfig.Resource = "arn:aws:states:::lambda:invoke.waitForTaskToken"
     newConfig.Type = "Task"
 
@@ -381,6 +383,22 @@ export class apb {
     const logs_disabled = {};
 
     return this.apb_config.logging ? logs_enabled : logs_disabled;
+  }
+
+  generate_playbook_start_step(start_at_step_name: string){
+    const initial_step = { 
+      [PLAYBOOK_FORMATTER_STEP_NAME] : {
+        "Type": "Pass",
+        "Parameters" : {
+          "execution_id.$" : "$.execution_id",
+          "artifacts.$" : "$.artifacts",
+          "results" : {},
+          "errors" : {},
+      },
+      "Next": this.resolveStateName(start_at_step_name)
+    }}
+
+    return initial_step
   }
 
 }
