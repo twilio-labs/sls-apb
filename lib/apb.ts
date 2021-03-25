@@ -87,15 +87,6 @@ export class apb {
 
   //* BOOLEAN CHECKS & Validators /////////////////////////////////////////////////////
 
-  isInteractionStateWithParameters(stateName: string, States = this.States) {
-    if (States[stateName] === undefined) {
-      throw new Error(`State ${stateName} does not exist in the States object`)
-    }
-    const state_to_check : State | InteractionState = States[stateName]
-    // return ((state_to_check.Type === "Task" || state_to_check.Type === "Interaction") && !!state_to_check['Parameters'])
-    return (state_to_check.Type === "Interaction" && !!state_to_check['Parameters'])
-  }
-
   isDefaultRetryDisabled(stateName: string) {
     if (this.Decorators.DisableDefaultRetry) {
       const disable = this.Decorators.DisableDefaultRetry
@@ -226,7 +217,6 @@ export class apb {
     return parameters
   }
 
-  //! Interactions still need helper states ):
   generateParametersForSoclessInteraction(state_name: string, handle_state_kwargs: Record<string, any>, function_name: string){
     const parameters = {
       FunctionName: function_name,
