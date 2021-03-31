@@ -12,3 +12,4 @@ export const DECORATOR_FLAGS = Object.freeze({
     })
 
 export const PLAYBOOK_FORMATTER_STEP_NAME = "PLAYBOOK_FORMATTER"
+export const PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME = "Was_Playbook_Direct_Executed"
