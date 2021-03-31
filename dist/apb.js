@@ -379,7 +379,6 @@ var apb = /** @class */ (function () {
         // Choice state checks if `artifacts` and `execution_id` exist in playbook input.
         // if yes, continue to regular playbook steps
         // if no, run lambda that sets up SOCless global state for this playbook, then continue to regular playbook
-        var PLAYBOOK_SETUP_STEP_NAME = "Setup_Socless_Global_State";
         var check_if_playbook_was_direct_executed = (_a = {},
             _a[constants_1.PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME] = {
                 "Type": "Choice",
@@ -427,13 +426,13 @@ var apb = /** @class */ (function () {
                         "Next": start_at_step_name
                     },
                 ],
-                "Default": PLAYBOOK_SETUP_STEP_NAME
+                "Default": constants_1.PLAYBOOK_SETUP_STEP_NAME
             },
             _a);
         var PLAYBOOK_SETUP_STEP = (_b = {},
-            _b[PLAYBOOK_SETUP_STEP_NAME] = {
+            _b[constants_1.PLAYBOOK_SETUP_STEP_NAME] = {
                 "Type": "Task",
-                "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:_socless_setup_global_state_for_direct_invoked_playbook",
+                "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:" + constants_1.SOCLESS_CORE_LAMBDA_NAME_FOR_RUNNING_PLAYBOOK_SETUP,
                 "Parameters": {
                     "execution_id.$": "$$.Execution.Name",
                     "playbook_name.$": "$$.StateMachine.Name",

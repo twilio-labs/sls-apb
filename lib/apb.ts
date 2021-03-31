@@ -1,6 +1,6 @@
-import { StepFunction, State, TaskState, InteractionState } from "./stepFunction";
-import { HelperState, PlaybookDefinition, SoclessInteractionStepParameters, SoclessTaskStepParameters } from "./socless_psuedo_states";
-import { PARSE_SELF_NAME, DEFAULT_RETRY, DECORATOR_FLAGS, PLAYBOOK_FORMATTER_STEP_NAME, PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME } from './constants'
+import { StepFunction, State } from "./stepFunction";
+import { HelperState, PlaybookDefinition, SoclessTaskStepParameters } from "./socless_psuedo_states";
+import { PARSE_SELF_NAME, DEFAULT_RETRY, DECORATOR_FLAGS, PLAYBOOK_FORMATTER_STEP_NAME, PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME, SOCLESS_CORE_LAMBDA_NAME_FOR_RUNNING_PLAYBOOK_SETUP, PLAYBOOK_SETUP_STEP_NAME } from './constants'
 import { PlaybookValidationError } from "./errors";
 
 const parse_self_pattern = new RegExp(`(\\"${PARSE_SELF_NAME}\\()(.*)(\\)\\")`, 'g')
@@ -404,8 +404,6 @@ export class apb {
     // Choice state checks if `artifacts` and `execution_id` exist in playbook input.
     // if yes, continue to regular playbook steps
     // if no, run lambda that sets up SOCless global state for this playbook, then continue to regular playbook
-    const PLAYBOOK_SETUP_STEP_NAME = "Setup_Socless_Global_State"
-
     const check_if_playbook_was_direct_executed = {
       [PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME]: {
         "Type": "Choice",
@@ -460,7 +458,7 @@ export class apb {
     const PLAYBOOK_SETUP_STEP = {
       [PLAYBOOK_SETUP_STEP_NAME]: {
         "Type": "Task",
-        "Resource" : "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:_socless_setup_global_state_for_direct_invoked_playbook",
+        "Resource" : "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:" + SOCLESS_CORE_LAMBDA_NAME_FOR_RUNNING_PLAYBOOK_SETUP,
         "Parameters": {
           "execution_id.$": "$$.Execution.Name",
           "playbook_name.$": "$$.StateMachine.Name",
