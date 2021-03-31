@@ -436,7 +436,7 @@ var apb = /** @class */ (function () {
                 "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:_socless_setup_global_state_for_direct_invoked_playbook",
                 "Parameters": {
                     "execution_id.$": "$$.Execution.Name",
-                    "playbook_name": "$$.StateMachine.Name",
+                    "playbook_name.$": "$$.StateMachine.Name",
                     "playbook_event_details.$": "$$.Execution.Input"
                 },
                 "Next": start_at_step_name

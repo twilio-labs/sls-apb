@@ -1,4 +1,5 @@
 const assert = require('assert')
+const fse = require("fs-extra");
 const { parse } = require('path')
 const { apb } = require('../dist/apb.js')
 const { PARSE_SELF_NAME, DECORATOR_FLAGS } = require('../dist/constants')
@@ -9,8 +10,8 @@ const {
   pb_parse_nonstring,
   socless_slack_integration_test_playbook,
   expected_state_machine_socless_slack_integration_test_playbook,
+  expected_output_pb_parallel_and_interaction,
   pb_with_missing_top_level_keys,
-  expected_output_pb_parallel_and_interaction
 } = require('./mocks')
 
 
@@ -263,4 +264,19 @@ describe('apb', () => {
     
   })
 
+})
+
+describe("#saves playbook outputs from mock playbooks for debugging", () => {
+  it(`should save new outputs`, () => {
+    const definitions = [
+      pb_parallel_and_interaction,
+      socless_slack_integration_test_playbook
+    ]
+
+    definitions.map(def => {
+        const playbook = new apb(def, {})
+        fse.writeJSON(`./test/generated_outputs/${playbook.PlaybookName}.json`, playbook.StateMachine)
+      }
+    )
+  })
 })
