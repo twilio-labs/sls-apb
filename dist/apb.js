@@ -52,9 +52,9 @@ var apb = /** @class */ (function () {
                 this.DecoratorFlags.hasTaskFailureHandler = false;
             }
         }
-        var starting_step = this.generate_playbook_start_step(StartAt);
+        var starting_step = this.generate_playbook_setup_steps(StartAt);
         // build resolved state machine from socless states
-        this.StateMachine = __assign(__assign({}, topLevel), { Comment: Comment, StartAt: constants_1.PLAYBOOK_FORMATTER_STEP_NAME, States: __assign(__assign({}, starting_step), this.transformStates()) });
+        this.StateMachine = __assign(__assign({}, topLevel), { Comment: Comment, StartAt: constants_1.PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME, States: __assign(__assign({}, starting_step), this.transformStates()) });
         // build finalized yaml output
         this.StateMachineYaml = {
             Resources: (_a = {},
@@ -358,7 +358,7 @@ var apb = /** @class */ (function () {
         var logs_disabled = {};
         return this.apb_config.logging ? logs_enabled : logs_disabled;
     };
-    apb.prototype.generate_playbook_start_step = function (start_at_step_name) {
+    apb.prototype.generate_playbook_formatter_step = function (start_at_step_name) {
         var _a;
         var initial_step = (_a = {},
             _a[constants_1.PLAYBOOK_FORMATTER_STEP_NAME] = {
@@ -373,6 +373,76 @@ var apb = /** @class */ (function () {
             },
             _a);
         return initial_step;
+    };
+    apb.prototype.generate_playbook_setup_steps = function (start_at_step_name) {
+        var _a, _b;
+        // Choice state checks if `artifacts` and `execution_id` exist in playbook input.
+        // if yes, continue to regular playbook steps
+        // if no, run lambda that sets up SOCless global state for this playbook, then continue to regular playbook
+        var check_if_playbook_was_direct_executed = (_a = {},
+            _a[constants_1.PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME] = {
+                "Type": "Choice",
+                "Choices": [
+                    {
+                        "And": [
+                            {
+                                "Variable": "$.artifacts",
+                                "IsPresent": true,
+                            },
+                            {
+                                "Variable": "$.execution_id",
+                                "IsPresent": true,
+                            },
+                            {
+                                "Variable": "$.errors",
+                                "IsPresent": false,
+                            },
+                            {
+                                "Variable": "$.results",
+                                "IsPresent": false,
+                            },
+                        ],
+                        "Next": constants_1.PLAYBOOK_FORMATTER_STEP_NAME
+                    },
+                    {
+                        "And": [
+                            {
+                                "Variable": "$.artifacts",
+                                "IsPresent": true,
+                            },
+                            {
+                                "Variable": "$.execution_id",
+                                "IsPresent": true,
+                            },
+                            {
+                                "Variable": "$.errors",
+                                "IsPresent": true,
+                            },
+                            {
+                                "Variable": "$.results",
+                                "IsPresent": true,
+                            },
+                        ],
+                        "Next": start_at_step_name
+                    },
+                ],
+                "Default": constants_1.PLAYBOOK_SETUP_STEP_NAME
+            },
+            _a);
+        var PLAYBOOK_SETUP_STEP = (_b = {},
+            _b[constants_1.PLAYBOOK_SETUP_STEP_NAME] = {
+                "Type": "Task",
+                "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:" + constants_1.SOCLESS_CORE_LAMBDA_NAME_FOR_RUNNING_PLAYBOOK_SETUP,
+                "Parameters": {
+                    "execution_id.$": "$$.Execution.Name",
+                    "playbook_name.$": "$$.StateMachine.Name",
+                    "playbook_event_details.$": "$$.Execution.Input"
+                },
+                "Next": start_at_step_name
+            },
+            _b);
+        var setup_steps = __assign(__assign(__assign({}, check_if_playbook_was_direct_executed), PLAYBOOK_SETUP_STEP), this.generate_playbook_formatter_step(start_at_step_name));
+        return setup_steps;
     };
     return apb;
 }());

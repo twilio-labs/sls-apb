@@ -1,12 +1,11 @@
-import { StepFunction, State, TaskState, InteractionState } from "./stepFunction";
-import { HelperState, PlaybookDefinition, SoclessInteractionStepParameters, SoclessTaskStepParameters } from "./socless_psuedo_states";
-import { PARSE_SELF_NAME, DEFAULT_RETRY, DECORATOR_FLAGS, PLAYBOOK_FORMATTER_STEP_NAME } from './constants'
+import { StepFunction, State } from "./stepFunction";
+import { HelperState, PlaybookDefinition, SoclessTaskStepParameters } from "./socless_psuedo_states";
+import { PARSE_SELF_NAME, DEFAULT_RETRY, DECORATOR_FLAGS, PLAYBOOK_FORMATTER_STEP_NAME, PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME, SOCLESS_CORE_LAMBDA_NAME_FOR_RUNNING_PLAYBOOK_SETUP, PLAYBOOK_SETUP_STEP_NAME } from './constants'
 import { PlaybookValidationError } from "./errors";
 
 const parse_self_pattern = new RegExp(`(\\"${PARSE_SELF_NAME}\\()(.*)(\\)\\")`, 'g')
 
 export class apb {
-
   apb_config: any;
   DecoratorFlags : any;
   States : Record<string, State>;
@@ -17,11 +16,11 @@ export class apb {
 
   constructor(definition: PlaybookDefinition, apb_config = {}) {
     this.validateTopLevelKeys(definition)
-    
     this.apb_config = apb_config;
     this.DecoratorFlags = {
       hasTaskFailureHandler: false,
-      ...DECORATOR_FLAGS}
+      ...DECORATOR_FLAGS
+    }
 
     const { Playbook, States, Decorators, StartAt, Comment, ...topLevel } = definition
     this.Decorators = Decorators || {}
@@ -38,13 +37,13 @@ export class apb {
       }
     }
 
-    const starting_step = this.generate_playbook_start_step(StartAt)
+    const starting_step = this.generate_playbook_setup_steps(StartAt)
 
     // build resolved state machine from socless states
     this.StateMachine = {
       ...topLevel,
       Comment,
-      StartAt: PLAYBOOK_FORMATTER_STEP_NAME,
+      StartAt: PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME,
       States: {
         ...starting_step,
         ...this.transformStates()
@@ -75,7 +74,7 @@ export class apb {
         }
       }
     }
-  
+
   }
 
   validateTopLevelKeys(definition: PlaybookDefinition) {
@@ -385,8 +384,8 @@ export class apb {
     return this.apb_config.logging ? logs_enabled : logs_disabled;
   }
 
-  generate_playbook_start_step(start_at_step_name: string){
-    const initial_step = { 
+  generate_playbook_formatter_step(start_at_step_name: string){
+    const initial_step = {
       [PLAYBOOK_FORMATTER_STEP_NAME] : {
         "Type": "Pass",
         "Parameters" : {
@@ -399,6 +398,83 @@ export class apb {
     }}
 
     return initial_step
+  }
+
+  generate_playbook_setup_steps(start_at_step_name: string) {
+    // Choice state checks if `artifacts` and `execution_id` exist in playbook input.
+    // if yes, continue to regular playbook steps
+    // if no, run lambda that sets up SOCless global state for this playbook, then continue to regular playbook
+    const check_if_playbook_was_direct_executed = {
+      [PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME]: {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "And": [
+              {
+                "Variable": "$.artifacts",
+                "IsPresent": true,
+              },
+              {
+                "Variable": "$.execution_id",
+                "IsPresent": true,
+              },
+              {
+                "Variable": "$.errors",
+                "IsPresent": false,
+              },
+              {
+                "Variable": "$.results",
+                "IsPresent": false,
+              },
+            ],
+            "Next": PLAYBOOK_FORMATTER_STEP_NAME
+          },
+          {
+            "And": [
+              {
+                "Variable": "$.artifacts",
+                "IsPresent": true,
+              },
+              {
+                "Variable": "$.execution_id",
+                "IsPresent": true,
+              },
+              {
+                "Variable": "$.errors",
+                "IsPresent": true,
+              },
+              {
+                "Variable": "$.results",
+                "IsPresent": true,
+              },
+            ],
+            "Next": start_at_step_name
+          },
+        ],
+        "Default": PLAYBOOK_SETUP_STEP_NAME
+      },
+    }
+
+    const PLAYBOOK_SETUP_STEP = {
+      [PLAYBOOK_SETUP_STEP_NAME]: {
+        "Type": "Task",
+        "Resource" : "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:" + SOCLESS_CORE_LAMBDA_NAME_FOR_RUNNING_PLAYBOOK_SETUP,
+        "Parameters": {
+          "execution_id.$": "$$.Execution.Name",
+          "playbook_name.$": "$$.StateMachine.Name",
+          "playbook_event_details.$" : "$$.Execution.Input"
+        },
+        "Next": start_at_step_name
+      }
+    }
+
+    const setup_steps = {
+      ...check_if_playbook_was_direct_executed,
+      ...PLAYBOOK_SETUP_STEP,
+      ...this.generate_playbook_formatter_step(start_at_step_name)
+    }
+
+    return setup_steps
   }
 
 }
