@@ -12,7 +12,7 @@ exports.ajv = new ajv_1.default({ allErrors: true });
 function validate(data, validator) {
     var valid = validator(data);
     if (!valid) {
-        throw new errors_1.PlaybookConfigValidationError("" + exports.ajv.errorsText(validator.errors));
+        throw new errors_1.PlaybookExtendedConfigValidationError("" + exports.ajv.errorsText(validator.errors));
     }
     return true;
 }

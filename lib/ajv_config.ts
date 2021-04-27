@@ -1,5 +1,5 @@
 import Ajv from "ajv";
-import { PlaybookConfigValidationError } from "./errors";
+import { PlaybookExtendedConfigValidationError } from "./errors";
 
 export const ajv = new Ajv({ allErrors: true });
 
@@ -8,7 +8,7 @@ export const ajv = new Ajv({ allErrors: true });
 export function validate(data: any, validator: any): boolean {
   const valid = validator(data);
   if (!valid) {
-    throw new PlaybookConfigValidationError(
+    throw new PlaybookExtendedConfigValidationError(
       `${ajv.errorsText(validator.errors)}`
     );
   }

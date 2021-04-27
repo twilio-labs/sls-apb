@@ -2,7 +2,7 @@ import {
   STATES_EXECUTION_ROLE_ARN,
   AWS_EVENT_RULE_RESOURCE_TYPE,
 } from "./constants";
-import { PlaybookConfigValidationError } from "./errors";
+import { PlaybookExtendedConfigValidationError } from "./errors";
 
 // Inferfaces for the Extended Playbook Configuration object that's supported in serverless.yml
 
@@ -67,7 +67,7 @@ export function buildScheduleResourceTarget(
     try {
       JSON.parse(input);
     } catch (err) {
-      throw new PlaybookConfigValidationError(
+      throw new PlaybookExtendedConfigValidationError(
         `"input" provided to schedule for ${playbookName} is not a valid JSONinfied string. Provided input is ${input}`
       );
     }

@@ -22,7 +22,7 @@ function buildScheduleResourceTarget(playbookName, input) {
             JSON.parse(input);
         }
         catch (err) {
-            throw new errors_1.PlaybookConfigValidationError("\"input\" provided to schedule for " + playbookName + " is not a valid JSONinfied string. Provided input is " + input);
+            throw new errors_1.PlaybookExtendedConfigValidationError("\"input\" provided to schedule for " + playbookName + " is not a valid JSONinfied string. Provided input is " + input);
         }
         targetConfig.Input = input;
     }

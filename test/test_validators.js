@@ -1,7 +1,7 @@
 const assert = require("assert");
 const { validate } = require("../dist/ajv_config.js");
 const { playbookScheduleConfigValidator } = require("../dist/validators.js");
-const { PlaybookConfigValidationError } = require("../dist/errors.js");
+const { PlaybookExtendedConfigValidationError } = require("../dist/errors.js");
 
 const validScheduleConfig = {
   description: "Hello there",
@@ -21,10 +21,10 @@ describe("#validatePlaybookScheduleConfig", () => {
     validate(validScheduleConfig, playbookScheduleConfigValidator);
   });
 
-  it("#Should raise PlaybookConfigValidationError with invalid scheduleConfig", () => {
+  it("#Should raise PlaybookExtendedConfigValidationError with invalid scheduleConfig", () => {
     assert.throws(
       () => validate(invalidScheduleConfig, playbookScheduleConfigValidator),
-      PlaybookConfigValidationError
+      PlaybookExtendedConfigValidationError
     );
   });
 });
