@@ -1,0 +1,11 @@
+{
+  "Playbook": "ScheduledPlaybook",
+  "Comment": "A simple playbook used predominantly for testing the playbook.events.schedule feature of sls-apb in serverless.yaml",
+  "StartAt": "HelloWorld",
+  "States": {
+    "HelloWorld": {
+      "Type": "Pass",
+      "End": true
+    }
+  }
+}
