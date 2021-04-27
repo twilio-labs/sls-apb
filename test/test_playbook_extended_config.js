@@ -11,7 +11,7 @@ const {
 } = require("../dist/constants.js");
 
 const testPlaybookName = "TestPlaybook";
-const testInput = { hello: "world" };
+const testInput = '{ "hello": "world" }';
 const testDescription = "Hello world";
 
 const testScheduleConfigNoInput = {

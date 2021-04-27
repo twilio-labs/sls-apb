@@ -27,7 +27,7 @@ module.exports = {
                     rate: "rate(5 minute)",
                     description: "Second Schdule",
                     enabled: false,
-                    input: { hello: "world" },
+                    input: '{ "hello": "world" }',
                   },
                 },
               ],

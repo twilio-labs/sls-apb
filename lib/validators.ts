@@ -19,7 +19,7 @@ const playbookScheduleConfigSchema = {
       type: "boolean",
     },
     input: {
-      type: "object",
+      type: "string",
     },
   },
   required: ["description", "rate", "enabled"],

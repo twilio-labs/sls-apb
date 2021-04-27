@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.buildScheduleResourceName = exports.buildScheduleResourcesFromEventConfigs = exports.buildScheduleResource = exports.buildScheduleResourceProperties = exports.buildScheduleResourceTarget = exports.ScheduleResourceState = void 0;
 var constants_1 = require("./constants");
+var errors_1 = require("./errors");
 var ScheduleResourceState;
 (function (ScheduleResourceState) {
     ScheduleResourceState["ENABLED"] = "ENABLED";
@@ -17,6 +18,12 @@ function buildScheduleResourceTarget(playbookName, input) {
     };
     // TODO: Do a check here to ensure that `input` is valid Json
     if (input) {
+        try {
+            JSON.parse(input);
+        }
+        catch (err) {
+            throw new errors_1.PlaybookConfigValidationError("\"input\" provided to schedule for " + playbookName + " is not a valid JSONinfied string. Provided input is " + input);
+        }
         targetConfig.Input = input;
     }
     return [targetConfig];
