@@ -30,7 +30,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.apb = void 0;
 var constants_1 = require("./constants");
 var errors_1 = require("./errors");
-var parse_self_pattern = new RegExp("(\\\"" + constants_1.PARSE_SELF_NAME + "\\()(.*)(\\)\\\")", 'g');
+var parse_self_pattern = new RegExp("(\\\"" + constants_1.PARSE_SELF_NAME + "\\()(.*)(\\)\\\")", "g");
 var apb = /** @class */ (function () {
     function apb(definition, apb_config) {
         var _a, _b;
@@ -60,23 +60,23 @@ var apb = /** @class */ (function () {
             Resources: (_a = {},
                 _a[this.PlaybookName] = {
                     Type: "AWS::StepFunctions::StateMachine",
-                    Properties: __assign({ RoleArn: "${{cf:socless-${{self:provider.stage}}.StatesExecutionRoleArn}}", StateMachineName: this.PlaybookName, DefinitionString: {
-                            "Fn::Sub": JSON.stringify(this.StateMachine, null, 4).replace(parse_self_pattern, "$2")
-                        } }, this.buildLoggingConfiguration())
+                    Properties: __assign({ RoleArn: constants_1.STATES_EXECUTION_ROLE_ARN, StateMachineName: this.PlaybookName, DefinitionString: {
+                            "Fn::Sub": JSON.stringify(this.StateMachine, null, 4).replace(parse_self_pattern, "$2"),
+                        } }, this.buildLoggingConfiguration()),
                 },
                 _a),
             Outputs: (_b = {},
                 _b[this.PlaybookName] = {
                     Description: Comment,
                     Value: {
-                        Ref: this.PlaybookName
-                    }
+                        Ref: this.PlaybookName,
+                    },
                 },
-                _b)
+                _b),
         };
     }
     apb.prototype.validateTopLevelKeys = function (definition) {
-        var REQUIRED_FIELDS = ['Playbook', 'Comment', 'StartAt', 'States'];
+        var REQUIRED_FIELDS = ["Playbook", "Comment", "StartAt", "States"];
         REQUIRED_FIELDS.forEach(function (key) {
             if (!definition[key])
                 throw new errors_1.PlaybookValidationError("Playbook definition does not have the required top-level key, '" + key + "'");
@@ -86,7 +86,7 @@ var apb = /** @class */ (function () {
     apb.prototype.isDefaultRetryDisabled = function (stateName) {
         if (this.Decorators.DisableDefaultRetry) {
             var disable = this.Decorators.DisableDefaultRetry;
-            return disable.all || (disable.tasks && disable.tasks.includes(stateName));
+            return (disable.all || (disable.tasks && disable.tasks.includes(stateName)));
         }
         else {
             return false;
@@ -101,7 +101,8 @@ var apb = /** @class */ (function () {
         }
     };
     apb.prototype.taskErrorHandlerExists = function () {
-        return this.Decorators.TaskFailureHandler && this.validateTaskFailureHandlerDecorator(this.Decorators.TaskFailureHandler);
+        return (this.Decorators.TaskFailureHandler &&
+            this.validateTaskFailureHandlerDecorator(this.Decorators.TaskFailureHandler));
     };
     //* STATE GENERATIONS /////////////////////////////////////////////////////
     apb.prototype.genIntegrationHelperStateName = function (originalName) {
@@ -109,20 +110,20 @@ var apb = /** @class */ (function () {
     };
     apb.prototype.genTaskFailureHandlerCatchConfig = function (stateName) {
         return {
-            "ErrorEquals": ["States.TaskFailed"],
-            "ResultPath": "$.errors." + stateName,
-            "Next": this.DecoratorFlags.TaskFailureHandlerStartLabel
+            ErrorEquals: ["States.TaskFailed"],
+            ResultPath: "$.errors." + stateName,
+            Next: this.DecoratorFlags.TaskFailureHandlerStartLabel,
         };
     };
     apb.prototype.genHelperState = function (stateConfig, stateName) {
         return {
             Type: "Pass",
             Result: {
-                "Name": stateName,
-                "Parameters": stateConfig.Parameters
+                Name: stateName,
+                Parameters: stateConfig.Parameters,
             },
             ResultPath: "$.State_Config",
-            Next: stateName
+            Next: stateName,
         };
     };
     apb.prototype.genTaskFailureHandlerStates = function (TaskFailureHandler) {
@@ -131,12 +132,12 @@ var apb = /** @class */ (function () {
         TaskFailureHandler.Next = this.DecoratorFlags.TaskFailureHandlerEndLabel;
         return _a = {},
             _a[this.DecoratorFlags.TaskFailureHandlerStartLabel] = {
-                "Type": "Pass",
-                "Next": this.DecoratorFlags.TaskFailureHandlerName
+                Type: "Pass",
+                Next: this.DecoratorFlags.TaskFailureHandlerName,
             },
             _a[this.DecoratorFlags.TaskFailureHandlerName] = TaskFailureHandler,
             _a[this.DecoratorFlags.TaskFailureHandlerEndLabel] = {
-                "Type": 'Fail'
+                Type: "Fail",
             },
             _a;
     };
@@ -148,7 +149,9 @@ var apb = /** @class */ (function () {
     apb.prototype.transformCatchConfig = function (catchConfig, States) {
         var _this = this;
         var catches = catchConfig.map(function (catchState) {
-            return Object.assign({}, catchState, { Next: _this.resolveStateName(catchState.Next, States) });
+            return Object.assign({}, catchState, {
+                Next: _this.resolveStateName(catchState.Next, States),
+            });
         });
         return catches;
     };
@@ -163,7 +166,8 @@ var apb = /** @class */ (function () {
             return Object.assign({}, retryState);
         });
         // add any remaining default retries if enabled
-        if (currentStepDefaultRetry.ErrorEquals.length >= 1 && !this.isDefaultRetryDisabled(stateName)) {
+        if (currentStepDefaultRetry.ErrorEquals.length >= 1 &&
+            !this.isDefaultRetryDisabled(stateName)) {
             retries.push(currentStepDefaultRetry);
         }
         return retries;
@@ -183,7 +187,9 @@ var apb = /** @class */ (function () {
         if (States === void 0) { States = this.States; }
         var choices = [];
         stateConfig.Choices.forEach(function (choice) {
-            choices.push(Object.assign({}, choice, { Next: _this.resolveStateName(choice.Next, States) }));
+            choices.push(Object.assign({}, choice, {
+                Next: _this.resolveStateName(choice.Next, States),
+            }));
         });
         return _a = {},
             _a[stateName] = Object.assign({}, stateConfig, { Choices: choices }),
@@ -195,9 +201,9 @@ var apb = /** @class */ (function () {
             "artifacts.$": "$.artifacts",
             "errors.$": "$.errors",
             "results.$": "$.results",
-            "State_Config": {
-                "Name": state_name,
-                "Parameters": handle_state_kwargs
+            State_Config: {
+                Name: state_name,
+                Parameters: handle_state_kwargs,
             },
         };
         return parameters;
@@ -206,7 +212,7 @@ var apb = /** @class */ (function () {
         var parameters = {
             FunctionName: function_name,
             Payload: {
-                "sfn_context": this.generateParametersForSoclessTask(state_name, handle_state_kwargs),
+                sfn_context: this.generateParametersForSoclessTask(state_name, handle_state_kwargs),
                 "task_token.$": "$$.Task.Token",
             },
         };
@@ -216,21 +222,30 @@ var apb = /** @class */ (function () {
         var _a;
         var output = {};
         var newConfig = Object.assign({}, stateConfig);
-        if (!!newConfig['Next']) {
-            Object.assign(newConfig, { Next: this.resolveStateName(newConfig.Next, States) });
+        if (!!newConfig["Next"]) {
+            Object.assign(newConfig, {
+                Next: this.resolveStateName(newConfig.Next, States),
+            });
         }
-        if (!!newConfig['Catch']) {
-            Object.assign(newConfig, { Catch: this.transformCatchConfig(newConfig.Catch, States) });
+        if (!!newConfig["Catch"]) {
+            Object.assign(newConfig, {
+                Catch: this.transformCatchConfig(newConfig.Catch, States),
+            });
         }
-        if (!!newConfig['Retry']) {
-            Object.assign(newConfig, { Retry: this.transformRetryConfig(newConfig.Retry, stateName) });
+        if (!!newConfig["Retry"]) {
+            Object.assign(newConfig, {
+                Retry: this.transformRetryConfig(newConfig.Retry, stateName),
+            });
         }
         else if (!this.isDefaultRetryDisabled(stateName)) {
-            Object.assign(newConfig, { "Retry": [constants_1.DEFAULT_RETRY] });
+            Object.assign(newConfig, { Retry: [constants_1.DEFAULT_RETRY] });
         }
-        if (DecoratorFlags.hasTaskFailureHandler === true && stateName !== this.DecoratorFlags.TaskFailureHandlerName) {
+        if (DecoratorFlags.hasTaskFailureHandler === true &&
+            stateName !== this.DecoratorFlags.TaskFailureHandlerName) {
             var currentCatchConfig = newConfig.Catch || [];
-            var handlerCatchConfig = [this.genTaskFailureHandlerCatchConfig(stateName)];
+            var handlerCatchConfig = [
+                this.genTaskFailureHandlerCatchConfig(stateName),
+            ];
             newConfig.Catch = __spreadArray(__spreadArray([], currentCatchConfig), handlerCatchConfig);
         }
         var handle_state_parameters = newConfig.Parameters;
@@ -244,21 +259,30 @@ var apb = /** @class */ (function () {
         var _a;
         var output = {};
         var newConfig = Object.assign({}, stateConfig);
-        if (!!stateConfig['Next']) {
-            Object.assign(newConfig, { Next: this.resolveStateName(stateConfig.Next, States) });
+        if (!!stateConfig["Next"]) {
+            Object.assign(newConfig, {
+                Next: this.resolveStateName(stateConfig.Next, States),
+            });
         }
-        if (!!stateConfig['Catch']) {
-            Object.assign(newConfig, { Catch: this.transformCatchConfig(stateConfig.Catch, States) });
+        if (!!stateConfig["Catch"]) {
+            Object.assign(newConfig, {
+                Catch: this.transformCatchConfig(stateConfig.Catch, States),
+            });
         }
-        if (!!stateConfig['Retry']) {
-            Object.assign(newConfig, { Retry: this.transformRetryConfig(stateConfig.Retry, stateName) });
+        if (!!stateConfig["Retry"]) {
+            Object.assign(newConfig, {
+                Retry: this.transformRetryConfig(stateConfig.Retry, stateName),
+            });
         }
         else if (!this.isDefaultRetryDisabled(stateName)) {
-            Object.assign(newConfig, { "Retry": [constants_1.DEFAULT_RETRY] });
+            Object.assign(newConfig, { Retry: [constants_1.DEFAULT_RETRY] });
         }
-        if (DecoratorFlags.hasTaskFailureHandler === true && stateName !== this.DecoratorFlags.TaskFailureHandlerName) {
+        if (DecoratorFlags.hasTaskFailureHandler === true &&
+            stateName !== this.DecoratorFlags.TaskFailureHandlerName) {
             var currentCatchConfig = newConfig.Catch || [];
-            var handlerCatchConfig = [this.genTaskFailureHandlerCatchConfig(stateName)];
+            var handlerCatchConfig = [
+                this.genTaskFailureHandlerCatchConfig(stateName),
+            ];
             newConfig.Catch = __spreadArray(__spreadArray([], currentCatchConfig), handlerCatchConfig);
         }
         newConfig.Parameters = this.generateParametersForSoclessInteraction(stateName, newConfig.Parameters, newConfig.Resource);
@@ -276,21 +300,28 @@ var apb = /** @class */ (function () {
         var helperState = {
             Type: "Task",
             Resource: "${{self:custom.core.MergeParallelOutput}}",
-            Catch: []
+            Catch: [],
         };
-        if (DecoratorFlags.hasTaskFailureHandler === true && stateName !== this.DecoratorFlags.TaskFailureHandlerName) {
+        if (DecoratorFlags.hasTaskFailureHandler === true &&
+            stateName !== this.DecoratorFlags.TaskFailureHandlerName) {
             // add catch for top level
             var currentCatchConfig = topLevel.Catch || [];
-            var handlerCatchConfig = [this.genTaskFailureHandlerCatchConfig(stateName)];
+            var handlerCatchConfig = [
+                this.genTaskFailureHandlerCatchConfig(stateName),
+            ];
             topLevel.Catch = __spreadArray(__spreadArray([], currentCatchConfig), handlerCatchConfig);
             // add catch and retries for merge output task
-            helperState.Catch = [this.genTaskFailureHandlerCatchConfig(helperStateName)];
+            helperState.Catch = [
+                this.genTaskFailureHandlerCatchConfig(helperStateName),
+            ];
         }
         if (!this.isDefaultRetryDisabled(stateName)) {
-            Object.assign(helperState, { "Retry": [constants_1.DEFAULT_RETRY] });
+            Object.assign(helperState, { Retry: [constants_1.DEFAULT_RETRY] });
         }
         if (End === undefined) {
-            Object.assign(helperState, { Next: this.resolveStateName(stateConfig.Next, States) });
+            Object.assign(helperState, {
+                Next: this.resolveStateName(stateConfig.Next, States),
+            });
         }
         else {
             Object.assign(helperState, { End: true });
@@ -299,7 +330,7 @@ var apb = /** @class */ (function () {
         var newBranches = Branches.map(function (branch) {
             return {
                 StartAt: _this.resolveStateName(branch.StartAt, branch.States),
-                States: _this.transformStates(States = branch.States, DecoratorFlags = {})
+                States: _this.transformStates((States = branch.States), (DecoratorFlags = {})),
             };
         });
         Object.assign(Output, { Branches: newBranches });
@@ -347,13 +378,13 @@ var apb = /** @class */ (function () {
                 Destinations: [
                     {
                         CloudWatchLogsLogGroup: {
-                            LogGroupArn: "${{cf:socless-${{self:provider.stage}}.PlaybooksLogGroup}}"
-                        }
-                    }
+                            LogGroupArn: "${{cf:socless-${{self:provider.stage}}.PlaybooksLogGroup}}",
+                        },
+                    },
                 ],
                 IncludeExecutionData: false,
-                Level: "ALL"
-            }
+                Level: "ALL",
+            },
         };
         var logs_disabled = {};
         return this.apb_config.logging ? logs_enabled : logs_disabled;
@@ -362,14 +393,14 @@ var apb = /** @class */ (function () {
         var _a;
         var initial_step = (_a = {},
             _a[constants_1.PLAYBOOK_FORMATTER_STEP_NAME] = {
-                "Type": "Pass",
-                "Parameters": {
+                Type: "Pass",
+                Parameters: {
                     "execution_id.$": "$.execution_id",
                     "artifacts.$": "$.artifacts",
-                    "results": {},
-                    "errors": {},
+                    results: {},
+                    errors: {},
                 },
-                "Next": this.resolveStateName(start_at_step_name)
+                Next: this.resolveStateName(start_at_step_name),
             },
             _a);
         return initial_step;
@@ -381,64 +412,65 @@ var apb = /** @class */ (function () {
         // if no, run lambda that sets up SOCless global state for this playbook, then continue to regular playbook
         var check_if_playbook_was_direct_executed = (_a = {},
             _a[constants_1.PLAYBOOK_DIRECT_INVOCATION_CHECK_STEP_NAME] = {
-                "Type": "Choice",
-                "Choices": [
+                Type: "Choice",
+                Choices: [
                     {
-                        "And": [
+                        And: [
                             {
-                                "Variable": "$.artifacts",
-                                "IsPresent": true,
+                                Variable: "$.artifacts",
+                                IsPresent: true,
                             },
                             {
-                                "Variable": "$.execution_id",
-                                "IsPresent": true,
+                                Variable: "$.execution_id",
+                                IsPresent: true,
                             },
                             {
-                                "Variable": "$.errors",
-                                "IsPresent": false,
+                                Variable: "$.errors",
+                                IsPresent: false,
                             },
                             {
-                                "Variable": "$.results",
-                                "IsPresent": false,
+                                Variable: "$.results",
+                                IsPresent: false,
                             },
                         ],
-                        "Next": constants_1.PLAYBOOK_FORMATTER_STEP_NAME
+                        Next: constants_1.PLAYBOOK_FORMATTER_STEP_NAME,
                     },
                     {
-                        "And": [
+                        And: [
                             {
-                                "Variable": "$.artifacts",
-                                "IsPresent": true,
+                                Variable: "$.artifacts",
+                                IsPresent: true,
                             },
                             {
-                                "Variable": "$.execution_id",
-                                "IsPresent": true,
+                                Variable: "$.execution_id",
+                                IsPresent: true,
                             },
                             {
-                                "Variable": "$.errors",
-                                "IsPresent": true,
+                                Variable: "$.errors",
+                                IsPresent: true,
                             },
                             {
-                                "Variable": "$.results",
-                                "IsPresent": true,
+                                Variable: "$.results",
+                                IsPresent: true,
                             },
                         ],
-                        "Next": start_at_step_name
+                        Next: start_at_step_name,
                     },
                 ],
-                "Default": constants_1.PLAYBOOK_SETUP_STEP_NAME
+                Default: constants_1.PLAYBOOK_SETUP_STEP_NAME,
             },
             _a);
         var PLAYBOOK_SETUP_STEP = (_b = {},
             _b[constants_1.PLAYBOOK_SETUP_STEP_NAME] = {
-                "Type": "Task",
-                "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:" + constants_1.SOCLESS_CORE_LAMBDA_NAME_FOR_RUNNING_PLAYBOOK_SETUP,
-                "Parameters": {
+                Type: "Task",
+                Resource: "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:" +
+                    constants_1.SOCLESS_CORE_LAMBDA_NAME_FOR_RUNNING_PLAYBOOK_SETUP,
+                Parameters: {
                     "execution_id.$": "$$.Execution.Name",
                     "playbook_name.$": "$$.StateMachine.Name",
-                    "playbook_event_details.$": "$$.Execution.Input"
+                    "playbook_event_details.$": "$$.Execution.Input",
                 },
-                "Next": start_at_step_name
+                Next: start_at_step_name,
             },
             _b);
         var setup_steps = __assign(__assign(__assign({}, check_if_playbook_was_direct_executed), PLAYBOOK_SETUP_STEP), this.generate_playbook_formatter_step(start_at_step_name));

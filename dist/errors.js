@@ -15,14 +15,26 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PlaybookValidationError = void 0;
+exports.PlaybookExtendedConfigValidationError = exports.PlaybookValidationError = void 0;
 var PlaybookValidationError = /** @class */ (function (_super) {
     __extends(PlaybookValidationError, _super);
     function PlaybookValidationError(message) {
         var _this = _super.call(this, message) || this;
         _this.name = "PlaybookValidationError";
+        Object.setPrototypeOf(_this, PlaybookValidationError.prototype);
         return _this;
     }
     return PlaybookValidationError;
 }(Error));
 exports.PlaybookValidationError = PlaybookValidationError;
+var PlaybookExtendedConfigValidationError = /** @class */ (function (_super) {
+    __extends(PlaybookExtendedConfigValidationError, _super);
+    function PlaybookExtendedConfigValidationError(message) {
+        var _this = _super.call(this, message) || this;
+        _this.name = "PlaybookExtendedConfigValidationError";
+        Object.setPrototypeOf(_this, PlaybookExtendedConfigValidationError.prototype);
+        return _this;
+    }
+    return PlaybookExtendedConfigValidationError;
+}(Error));
+exports.PlaybookExtendedConfigValidationError = PlaybookExtendedConfigValidationError;
