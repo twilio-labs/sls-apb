@@ -9,19 +9,35 @@ import {
 } from "./playbook_extended_config";
 import { validate } from "./ajv_config";
 import { playbookEventsConfigValidator } from "./validators";
+import { STATES_EXECUTION_ROLE_ARN } from "./constants";
 
 class SlsApb {
   sls: any;
   options: any;
   apb_config: ApbConfig;
+  hooks: object;
+  playbookNameAndExtendedConfig: Record<string, PlaybookEventsConfig>;
 
   constructor(serverless, options) {
     this.sls = serverless;
     this.options = options;
     this.apb_config = this.getApbConfig();
 
+    this.hooks = {
+      // Compile scheduled events after the constructor
+      // during the package:compileEvents lifecycle event
+      // because by then, serverless variables will be correctly
+      // resolved
+      "package:compileEvents": this.compileScheduledEvents.bind(this),
+    };
+    // add states execution role to custom variables as well so that it
+    // gets resolved
+    this.sls.service.custom._statesExecutionRole = STATES_EXECUTION_ROLE_ARN;
+
     let playbooks: (string | Record<string, PlaybookEventsConfig>)[] = this.sls
       .service.custom.playbooks;
+
+    this.playbookNameAndExtendedConfig = {};
 
     if (!playbooks) {
       this.sls.cli.log(
@@ -34,19 +50,17 @@ class SlsApb {
 
       playbooks.forEach((playbook_config) => {
         // Determine if playbook_config is simple string or has config object
-        let playbook_dir, playbookEventConfigs;
+        let playbook_dir, playbookExtendedConfig;
 
         if (typeof playbook_config === "string") {
           playbook_dir = playbook_config;
-          playbookEventConfigs = null;
+          playbookExtendedConfig = null;
         } else if (
           Object.prototype.toString.call(playbook_config) === "[object Object]"
         ) {
-          [playbook_dir, playbookEventConfigs] = Object.entries(
+          [playbook_dir, playbookExtendedConfig] = Object.entries(
             playbook_config
           )[0];
-
-          validate(playbookEventConfigs, playbookEventsConfigValidator);
         } else {
           throw new Error(
             `Invalid configuration in playbooks object. Only string or object allowed. Given ${playbook_config}`
@@ -78,14 +92,10 @@ class SlsApb {
             );
           }
 
-          // If there's a playbookEventConfigs, build it and add it to the resources
-          if (!!playbookEventConfigs) {
-            this.sls.service.resources.push(
-              buildScheduleResourcesFromEventConfigs(
-                renderedPlaybook.PlaybookName,
-                playbookEventConfigs.events
-              )
-            );
+          if (!!playbookExtendedConfig) {
+            this.playbookNameAndExtendedConfig[
+              renderedPlaybook.PlaybookName
+            ] = playbookExtendedConfig;
           }
 
           // Add the rendered State Machine and the stored resource to the resources list
@@ -114,6 +124,30 @@ class SlsApb {
   buildPlaybookPath(playbookDir): string {
     const playbooksFolder = this.apb_config.playbooksFolder || "./playbooks";
     return `${playbooksFolder}/${playbookDir}/playbook.json`;
+  }
+
+  compileScheduledEvents() {
+    let compiledResource;
+    for (const [playbookName, extendedConfig] of Object.entries(
+      this.playbookNameAndExtendedConfig
+    )) {
+      validate(extendedConfig, playbookEventsConfigValidator);
+
+      compiledResource = buildScheduleResourcesFromEventConfigs(
+        playbookName,
+        extendedConfig.events,
+        this.sls.service.custom._statesExecutionRole
+      );
+
+      this.sls.service.resources.Resources = {
+        ...this.sls.service.resources.Resources,
+        ...compiledResource.Resources,
+      };
+      this.sls.service.resources.Outputs = {
+        ...this.sls.service.resources.Outputs,
+        ...compiledResource.Outputs,
+      };
+    }
   }
 }
 

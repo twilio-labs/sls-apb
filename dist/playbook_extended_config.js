@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildScheduleResourceName = exports.buildScheduleResourcesFromEventConfigs = exports.buildScheduleResource = exports.buildScheduleResourceProperties = exports.buildScheduleResourceTarget = exports.ScheduleResourceState = void 0;
+exports.buildScheduleResourceName = exports.buildScheduleResourcesFromEventConfigs = exports.buildScheduleResourceOutput = exports.buildScheduleResource = exports.buildScheduleResourceProperties = exports.buildScheduleResourceTarget = exports.ScheduleResourceState = void 0;
 var constants_1 = require("./constants");
 var errors_1 = require("./errors");
 var ScheduleResourceState;
@@ -47,13 +47,26 @@ function buildScheduleResource(playbookName, scheduleConfig) {
     };
 }
 exports.buildScheduleResource = buildScheduleResource;
-function buildScheduleResourcesFromEventConfigs(playbookName, scheduleConfigs) {
+function buildScheduleResourceOutput(scheduleResourceName, scheduleConfig) {
+    return {
+        Description: scheduleConfig.description,
+        Value: {
+            Ref: scheduleResourceName,
+        },
+    };
+}
+exports.buildScheduleResourceOutput = buildScheduleResourceOutput;
+function buildScheduleResourcesFromEventConfigs(playbookName, scheduleConfigs, roleArn) {
     var resources = {};
+    var outputs = {};
     scheduleConfigs.forEach(function (config, index) {
         var resourceName = buildScheduleResourceName(playbookName, index);
-        resources[resourceName] = buildScheduleResource(playbookName, config.schedule);
+        var resource = buildScheduleResource(playbookName, config.schedule);
+        resource.Properties.Targets[0].RoleArn = roleArn;
+        resources[resourceName] = resource;
+        outputs[resourceName] = buildScheduleResourceOutput(resourceName, config.schedule);
     });
-    return { Resources: resources };
+    return { Resources: resources, Outputs: outputs };
 }
 exports.buildScheduleResourcesFromEventConfigs = buildScheduleResourcesFromEventConfigs;
 function buildScheduleResourceName(playbookName, sequenceId) {

@@ -47,8 +47,13 @@ export enum ScheduleResourceState {
 export interface ScheduleResourceTarget {
   Arn: object;
   Id: string;
-  RoleArn: typeof STATES_EXECUTION_ROLE_ARN;
+  RoleArn: string;
   Input?: string;
+}
+
+export interface ScheduleResourceOutput {
+  Description: string;
+  Value: object;
 }
 
 export function buildScheduleResourceTarget(
@@ -101,20 +106,37 @@ export function buildScheduleResource(
   };
 }
 
+export function buildScheduleResourceOutput(
+  scheduleResourceName: string,
+  scheduleConfig: PlaybookScheduleConfig
+): ScheduleResourceOutput {
+  return {
+    Description: scheduleConfig.description,
+    Value: {
+      Ref: scheduleResourceName,
+    },
+  };
+}
+
 export function buildScheduleResourcesFromEventConfigs(
   playbookName: string,
-  scheduleConfigs: PlaybookSchedule[]
+  scheduleConfigs: PlaybookSchedule[],
+  roleArn: string
 ) {
   const resources = {};
+  const outputs = {};
   scheduleConfigs.forEach((config, index) => {
     const resourceName = buildScheduleResourceName(playbookName, index);
-    resources[resourceName] = buildScheduleResource(
-      playbookName,
+    const resource = buildScheduleResource(playbookName, config.schedule);
+    resource.Properties.Targets[0].RoleArn = roleArn;
+    resources[resourceName] = resource;
+    outputs[resourceName] = buildScheduleResourceOutput(
+      resourceName,
       config.schedule
     );
   });
 
-  return { Resources: resources };
+  return { Resources: resources, Outputs: outputs };
 }
 
 export function buildScheduleResourceName(

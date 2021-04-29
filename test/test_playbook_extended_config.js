@@ -13,6 +13,8 @@ const {
 const testPlaybookName = "TestPlaybook";
 const testInput = '{ "hello": "world" }';
 const testDescription = "Hello world";
+const testEventRuleResource0 = `${testPlaybookName}EventRule0`;
+const testEventRuleResource1 = `${testPlaybookName}EventRule1`;
 
 const testScheduleConfigNoInput = {
   rate: "rate(1 minute)",
@@ -68,10 +70,28 @@ const testPlaybookEventConfigs = [
   { schedule: testScheduleConfigNoInput },
 ];
 
+const expectedScheduleResourceOutput0 = {
+  Description: testScheduleConfigNoInput.description,
+  Value: {
+    Ref: testEventRuleResource0,
+  },
+};
+
+const expectedScheduleResourceOutput1 = {
+  Description: testScheduleConfigNoInput.description,
+  Value: {
+    Ref: testEventRuleResource1,
+  },
+};
+
 const expectedScheduleResourcesFromEventConfig = {
   Resources: {
-    [`${testPlaybookName}EventRule0`]: expectedScheduleResourceWithInput,
-    [`${testPlaybookName}EventRule1`]: expectedScheduleResourceNoInput,
+    [testEventRuleResource0]: expectedScheduleResourceWithInput,
+    [testEventRuleResource1]: expectedScheduleResourceNoInput,
+  },
+  Outputs: {
+    [testEventRuleResource0]: expectedScheduleResourceOutput0,
+    [testEventRuleResource1]: expectedScheduleResourceOutput1,
   },
 };
 
@@ -134,7 +154,8 @@ describe("playbook_events", () => {
     it("Should return expected Resources mapped to their Names", () => {
       const builtResourceMap = buildScheduleResourcesFromEventConfigs(
         testPlaybookName,
-        testPlaybookEventConfigs
+        testPlaybookEventConfigs,
+        STATES_EXECUTION_ROLE_ARN
       );
 
       assert.deepStrictEqual(
