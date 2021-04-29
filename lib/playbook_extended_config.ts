@@ -51,6 +51,11 @@ export interface ScheduleResourceTarget {
   Input?: string;
 }
 
+export interface ScheduleResourceOutput {
+  Description: string;
+  Value: object;
+}
+
 export function buildScheduleResourceTarget(
   playbookName: string,
   input: string | undefined
@@ -101,20 +106,37 @@ export function buildScheduleResource(
   };
 }
 
+export function buildScheduleResourceOutput(
+  scheduleResourceName: string,
+  scheduleConfig: PlaybookScheduleConfig
+): ScheduleResourceOutput {
+  return {
+    Description: scheduleConfig.description,
+    Value: {
+      Ref: scheduleResourceName,
+    },
+  };
+}
+
 export function buildScheduleResourcesFromEventConfigs(
   playbookName: string,
   scheduleConfigs: PlaybookSchedule[],
   roleArn: string
 ) {
   const resources = {};
+  const outputs = {};
   scheduleConfigs.forEach((config, index) => {
     const resourceName = buildScheduleResourceName(playbookName, index);
     const resource = buildScheduleResource(playbookName, config.schedule);
     resource.Properties.Targets[0].RoleArn = roleArn;
     resources[resourceName] = resource;
+    outputs[resourceName] = buildScheduleResourceOutput(
+      resourceName,
+      config.schedule
+    );
   });
 
-  return { Resources: resources };
+  return { Resources: resources, Outputs: outputs };
 }
 
 export function buildScheduleResourceName(

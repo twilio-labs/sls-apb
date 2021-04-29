@@ -112,6 +112,7 @@ var SlsApb = /** @class */ (function () {
             ajv_config_1.validate(extendedConfig, validators_1.playbookEventsConfigValidator);
             compiledResource = playbook_extended_config_1.buildScheduleResourcesFromEventConfigs(playbookName, extendedConfig.events, this.sls.service.custom._statesExecutionRole);
             this.sls.service.resources.Resources = __assign(__assign({}, this.sls.service.resources.Resources), compiledResource.Resources);
+            this.sls.service.resources.Outputs = __assign(__assign({}, this.sls.service.resources.Outputs), compiledResource.Outputs);
         }
     };
     return SlsApb;

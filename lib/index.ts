@@ -143,6 +143,10 @@ class SlsApb {
         ...this.sls.service.resources.Resources,
         ...compiledResource.Resources,
       };
+      this.sls.service.resources.Outputs = {
+        ...this.sls.service.resources.Outputs,
+        ...compiledResource.Outputs,
+      };
     }
   }
 }
