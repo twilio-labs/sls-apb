@@ -134,7 +134,8 @@ describe("playbook_events", () => {
     it("Should return expected Resources mapped to their Names", () => {
       const builtResourceMap = buildScheduleResourcesFromEventConfigs(
         testPlaybookName,
-        testPlaybookEventConfigs
+        testPlaybookEventConfigs,
+        STATES_EXECUTION_ROLE_ARN
       );
 
       assert.deepStrictEqual(

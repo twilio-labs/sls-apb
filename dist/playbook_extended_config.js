@@ -47,11 +47,13 @@ function buildScheduleResource(playbookName, scheduleConfig) {
     };
 }
 exports.buildScheduleResource = buildScheduleResource;
-function buildScheduleResourcesFromEventConfigs(playbookName, scheduleConfigs) {
+function buildScheduleResourcesFromEventConfigs(playbookName, scheduleConfigs, roleArn) {
     var resources = {};
     scheduleConfigs.forEach(function (config, index) {
         var resourceName = buildScheduleResourceName(playbookName, index);
-        resources[resourceName] = buildScheduleResource(playbookName, config.schedule);
+        var resource = buildScheduleResource(playbookName, config.schedule);
+        resource.Properties.Targets[0].RoleArn = roleArn;
+        resources[resourceName] = resource;
     });
     return { Resources: resources };
 }
