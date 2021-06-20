@@ -15,6 +15,7 @@ import {
   STATES_EXECUTION_ROLE_ARN,
 } from "./constants";
 import { PlaybookValidationError } from "./errors";
+import { StateMachineYaml } from "./sls_apb";
 
 const parse_self_pattern = new RegExp(
   `(\\"${PARSE_SELF_NAME}\\()(.*)(\\)\\")`,
@@ -28,7 +29,7 @@ export class apb {
   StateMachine?: StepFunction;
   Decorators: Record<string, any>;
   PlaybookName: string;
-  StateMachineYaml: Object;
+  StateMachineYaml: StateMachineYaml;
 
   constructor(definition: PlaybookDefinition, apb_config = {}) {
     this.validateTopLevelKeys(definition);

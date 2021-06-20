@@ -10,6 +10,7 @@ import {
 import { validate } from "./ajv_config";
 import { playbookEventsConfigValidator } from "./validators";
 import { STATES_EXECUTION_ROLE_ARN } from "./constants";
+import { SlsApbVariableResolutionHelper } from "./sls_apb";
 
 class SlsApb {
   sls: any;
@@ -28,11 +29,35 @@ class SlsApb {
       // during the package:compileEvents lifecycle event
       // because by then, serverless variables will be correctly
       // resolved
+      "after:deploy:deploy": () => {
+        this.sls.cli.log(
+          JSON.stringify(
+            this.sls.service.provider.compiledCloudFormationTemplate
+          )
+        );
+      },
+      "package:compileFunctions": this.compilePlaybookResources.bind(this),
       "package:compileEvents": this.compileScheduledEvents.bind(this),
     };
-    // add states execution role to custom variables as well so that it
-    // gets resolved
-    this.sls.service.custom._statesExecutionRole = STATES_EXECUTION_ROLE_ARN;
+
+    // In the Serverless Framework, serverless variables are resolved after plugins are initialized i.e. after all plugin constructors are called.
+    // However, during plugin initialization, serverless variables are unresolved. As such, code in the constructor operates on unresolved Serverless variables.
+    //
+    // The sls-apb plugin occasionally needs to preprocess data that contains unresolved serverless variables, but use that same data later on after the variables
+    // within it have been resolved.
+    // For example: Playbooks need to be rendered into StateMachine resources before variables are resolved but added to CF after variables are resolved.
+    // The _slsApbVariablesResolutionHelper exists to support these use-cases.
+    // Any data with serverless variables that needs to be processed pre-variable resolution then accessed post-resolution (via serverless lifecycle hooks) lives here
+    // It exists on the serverless.custom object because variables in the custom object are unresolved during plugin initialization, but resolved post-plugin initialization
+    const variableResolutionHelper: SlsApbVariableResolutionHelper = {
+      renderedPlaybooks: {},
+      statesExecutionRole: STATES_EXECUTION_ROLE_ARN,
+    };
+
+    this.sls.service.custom._slsApbVariableResolutionHelper = variableResolutionHelper;
+    // // add states execution role to custom variables as well so that it
+    // // gets resolved
+    // this.sls.service.custom._statesExecutionRole = STATES_EXECUTION_ROLE_ARN;
 
     let playbooks: (string | Record<string, PlaybookEventsConfig>)[] = this.sls
       .service.custom.playbooks;
@@ -44,10 +69,6 @@ class SlsApb {
         "Warning: No playbooks listed for deployment. List playbooks under serverless.yml `custom.playbooks` section to deploy them"
       );
     } else {
-      if (this.sls.service.resources === undefined) {
-        this.sls.service.resources = [];
-      }
-
       playbooks.forEach((playbook_config) => {
         // Determine if playbook_config is simple string or has config object
         let playbook_dir, playbookExtendedConfig;
@@ -76,30 +97,23 @@ class SlsApb {
           let stateMachine = fse.readJsonSync(playbook_path);
           let renderedPlaybook = new apb(stateMachine, this.apb_config);
 
-          //temporarily store the resource
-          let temp = this.sls.service.resources;
-          //initiate resources as an empty list
-          this.sls.service.resources = [];
-          if (temp != null && temp instanceof Array) {
-            this.sls.service.resources.push(
-              ...temp,
-              renderedPlaybook.StateMachineYaml
-            );
-          } else {
-            this.sls.service.resources.push(
-              temp,
-              renderedPlaybook.StateMachineYaml
-            );
-          }
+          this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Resources = {
+            ...this.sls.service.custom._slsApbVariableResolutionHelper
+              .renderedPlaybooks.Resources,
+            ...renderedPlaybook.StateMachineYaml.Resources,
+          };
+
+          this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Outputs = {
+            ...this.sls.service.custom._slsApbVariableResolutionHelper
+              .renderedPlaybooks.Outputs,
+            ...renderedPlaybook.StateMachineYaml.Outputs,
+          };
 
           if (!!playbookExtendedConfig) {
             this.playbookNameAndExtendedConfig[
               renderedPlaybook.PlaybookName
             ] = playbookExtendedConfig;
           }
-
-          // Add the rendered State Machine and the stored resource to the resources list
-          //this.sls.cli.log(JSON.stringify(this.sls.service.resources, null, 2));
         } catch (err) {
           throw new Error(
             `Failed to render State Machine for ${playbook_path}: ${err}`
@@ -126,6 +140,20 @@ class SlsApb {
     return `${playbooksFolder}/${playbookDir}/playbook.json`;
   }
 
+  compilePlaybookResources() {
+    this.sls.service.provider.compiledCloudFormationTemplate.Resources = {
+      ...this.sls.service.provider.compiledCloudFormationTemplate.Resources,
+      ...this.sls.service.custom._slsApbVariableResolutionHelper
+        .renderedPlaybooks.Resources,
+    };
+
+    this.sls.service.provider.compiledCloudFormationTemplate.Outputs = {
+      ...this.sls.service.provider.compiledCloudFormationTemplate.Outputs,
+      ...this.sls.service.custom._slsApbVariableResolutionHelper
+        .renderedPlaybooks.Outputs,
+    };
+  }
+
   compileScheduledEvents() {
     let compiledResource;
     for (const [playbookName, extendedConfig] of Object.entries(
@@ -136,15 +164,17 @@ class SlsApb {
       compiledResource = buildScheduleResourcesFromEventConfigs(
         playbookName,
         extendedConfig.events,
-        this.sls.service.custom._statesExecutionRole
+        this.sls.service.custom._slsApbVariableResolutionHelper
+          .statesExecutionRole
       );
 
-      this.sls.service.resources.Resources = {
-        ...this.sls.service.resources.Resources,
+      this.sls.service.provider.compiledCloudFormationTemplate.Resources = {
+        ...this.sls.service.provider.compiledCloudFormationTemplate.Resources,
         ...compiledResource.Resources,
       };
-      this.sls.service.resources.Outputs = {
-        ...this.sls.service.resources.Outputs,
+
+      this.sls.service.provider.compiledCloudFormationTemplate.Outputs = {
+        ...this.sls.service.provider.compiledCloudFormationTemplate.Outputs,
         ...compiledResource.Outputs,
       };
     }
