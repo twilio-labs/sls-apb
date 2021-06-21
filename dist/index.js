@@ -30,9 +30,6 @@ var SlsApb = /** @class */ (function () {
             // during the package:compileEvents lifecycle event
             // because by then, serverless variables will be correctly
             // resolved
-            "after:deploy:deploy": function () {
-                _this.sls.cli.log(JSON.stringify(_this.sls.service.provider.compiledCloudFormationTemplate));
-            },
             "package:compileFunctions": this.compilePlaybookResources.bind(this),
             "package:compileEvents": this.compileScheduledEvents.bind(this),
         };
