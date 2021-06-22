@@ -10,11 +10,6 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
-var __spreadArray = (this && this.__spreadArray) || function (to, from) {
-    for (var i = 0, il = from.length, j = to.length; i < il; i++, j++)
-        to[j] = from[i];
-    return to;
-};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -35,11 +30,26 @@ var SlsApb = /** @class */ (function () {
             // during the package:compileEvents lifecycle event
             // because by then, serverless variables will be correctly
             // resolved
+            "package:compileFunctions": this.compilePlaybookResources.bind(this),
             "package:compileEvents": this.compileScheduledEvents.bind(this),
         };
-        // add states execution role to custom variables as well so that it
-        // gets resolved
-        this.sls.service.custom._statesExecutionRole = constants_1.STATES_EXECUTION_ROLE_ARN;
+        // In the Serverless Framework, serverless variables are resolved after plugins are initialized i.e. after all plugin constructors are called.
+        // However, during plugin initialization, serverless variables are unresolved. As such, code in the constructor operates on unresolved Serverless variables.
+        //
+        // The sls-apb plugin occasionally needs to preprocess data that contains unresolved serverless variables, but use that same data later on after the variables
+        // within it have been resolved.
+        // For example: Playbooks need to be rendered into StateMachine resources before variables are resolved but added to CF after variables are resolved.
+        // The _slsApbVariablesResolutionHelper exists to support these use-cases.
+        // Any data with serverless variables that needs to be processed pre-variable resolution then accessed post-resolution (via serverless lifecycle hooks) lives here
+        // It exists on the serverless.custom object because variables in the custom object are unresolved during plugin initialization, but resolved post-plugin initialization
+        var variableResolutionHelper = {
+            renderedPlaybooks: {},
+            statesExecutionRole: constants_1.STATES_EXECUTION_ROLE_ARN,
+        };
+        this.sls.service.custom._slsApbVariableResolutionHelper = variableResolutionHelper;
+        // // add states execution role to custom variables as well so that it
+        // // gets resolved
+        // this.sls.service.custom._statesExecutionRole = STATES_EXECUTION_ROLE_ARN;
         var playbooks = this.sls
             .service.custom.playbooks;
         this.playbookNameAndExtendedConfig = {};
@@ -47,11 +57,8 @@ var SlsApb = /** @class */ (function () {
             this.sls.cli.log("Warning: No playbooks listed for deployment. List playbooks under serverless.yml `custom.playbooks` section to deploy them");
         }
         else {
-            if (this.sls.service.resources === undefined) {
-                this.sls.service.resources = [];
-            }
             playbooks.forEach(function (playbook_config) {
-                var _a, _b;
+                var _a;
                 // Determine if playbook_config is simple string or has config object
                 var playbook_dir, playbookExtendedConfig;
                 if (typeof playbook_config === "string") {
@@ -71,21 +78,13 @@ var SlsApb = /** @class */ (function () {
                 try {
                     var stateMachine = fs_extra_1.default.readJsonSync(playbook_path);
                     var renderedPlaybook = new apb_1.apb(stateMachine, _this.apb_config);
-                    //temporarily store the resource
-                    var temp = _this.sls.service.resources;
-                    //initiate resources as an empty list
-                    _this.sls.service.resources = [];
-                    if (temp != null && temp instanceof Array) {
-                        (_b = _this.sls.service.resources).push.apply(_b, __spreadArray(__spreadArray([], temp), [renderedPlaybook.StateMachineYaml]));
-                    }
-                    else {
-                        _this.sls.service.resources.push(temp, renderedPlaybook.StateMachineYaml);
-                    }
+                    _this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Resources = __assign(__assign({}, _this.sls.service.custom._slsApbVariableResolutionHelper
+                        .renderedPlaybooks.Resources), renderedPlaybook.StateMachineYaml.Resources);
+                    _this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Outputs = __assign(__assign({}, _this.sls.service.custom._slsApbVariableResolutionHelper
+                        .renderedPlaybooks.Outputs), renderedPlaybook.StateMachineYaml.Outputs);
                     if (!!playbookExtendedConfig) {
                         _this.playbookNameAndExtendedConfig[renderedPlaybook.PlaybookName] = playbookExtendedConfig;
                     }
-                    // Add the rendered State Machine and the stored resource to the resources list
-                    //this.sls.cli.log(JSON.stringify(this.sls.service.resources, null, 2));
                 }
                 catch (err) {
                     throw new Error("Failed to render State Machine for " + playbook_path + ": " + err);
@@ -105,14 +104,21 @@ var SlsApb = /** @class */ (function () {
         var playbooksFolder = this.apb_config.playbooksFolder || "./playbooks";
         return playbooksFolder + "/" + playbookDir + "/playbook.json";
     };
+    SlsApb.prototype.compilePlaybookResources = function () {
+        this.sls.service.provider.compiledCloudFormationTemplate.Resources = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Resources), this.sls.service.custom._slsApbVariableResolutionHelper
+            .renderedPlaybooks.Resources);
+        this.sls.service.provider.compiledCloudFormationTemplate.Outputs = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Outputs), this.sls.service.custom._slsApbVariableResolutionHelper
+            .renderedPlaybooks.Outputs);
+    };
     SlsApb.prototype.compileScheduledEvents = function () {
         var compiledResource;
         for (var _i = 0, _a = Object.entries(this.playbookNameAndExtendedConfig); _i < _a.length; _i++) {
             var _b = _a[_i], playbookName = _b[0], extendedConfig = _b[1];
             ajv_config_1.validate(extendedConfig, validators_1.playbookEventsConfigValidator);
-            compiledResource = playbook_extended_config_1.buildScheduleResourcesFromEventConfigs(playbookName, extendedConfig.events, this.sls.service.custom._statesExecutionRole);
-            this.sls.service.resources.Resources = __assign(__assign({}, this.sls.service.resources.Resources), compiledResource.Resources);
-            this.sls.service.resources.Outputs = __assign(__assign({}, this.sls.service.resources.Outputs), compiledResource.Outputs);
+            compiledResource = playbook_extended_config_1.buildScheduleResourcesFromEventConfigs(playbookName, extendedConfig.events, this.sls.service.custom._slsApbVariableResolutionHelper
+                .statesExecutionRole);
+            this.sls.service.provider.compiledCloudFormationTemplate.Resources = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Resources), compiledResource.Resources);
+            this.sls.service.provider.compiledCloudFormationTemplate.Outputs = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Outputs), compiledResource.Outputs);
         }
     };
     return SlsApb;
