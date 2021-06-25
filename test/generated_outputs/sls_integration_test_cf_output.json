@@ -1,0 +1,114 @@
+{
+	"AWSTemplateFormatVersion": "2010-09-09",
+	"Description": "The AWS CloudFormation template for this Serverless application",
+	"Resources": {
+		"ServerlessDeploymentBucket": {
+			"Type": "AWS::S3::Bucket",
+			"Properties": {
+				"BucketEncryption": {
+					"ServerSideEncryptionConfiguration": [{
+						"ServerSideEncryptionByDefault": {
+							"SSEAlgorithm": "AES256"
+						}
+					}]
+				}
+			}
+		},
+		"ServerlessDeploymentBucketPolicy": {
+			"Type": "AWS::S3::BucketPolicy",
+			"Properties": {
+				"Bucket": {
+					"Ref": "ServerlessDeploymentBucket"
+				},
+				"PolicyDocument": {
+					"Statement": [{
+						"Action": "s3:*",
+						"Effect": "Deny",
+						"Principal": "*",
+						"Resource": [{
+							"Fn::Join": ["", ["arn:", {
+								"Ref": "AWS::Partition"
+							}, ":s3:::", {
+								"Ref": "ServerlessDeploymentBucket"
+							}, "/*"]]
+						}, {
+							"Fn::Join": ["", ["arn:", {
+								"Ref": "AWS::Partition"
+							}, ":s3:::", {
+								"Ref": "ServerlessDeploymentBucket"
+							}]]
+						}],
+						"Condition": {
+							"Bool": {
+								"aws:SecureTransport": false
+							}
+						}
+					}]
+				}
+			}
+		},
+		"HelloWorld": {
+			"Type": "AWS::StepFunctions::StateMachine",
+			"Properties": {
+				"RoleArn": "${{cf:socless-${{self:provider.stage}}.StatesExecutionRoleArn}}",
+				"StateMachineName": "HelloWorld",
+				"DefinitionString": {
+					"Fn::Sub": "{\n    \"Comment\": \"A simple playbook used predominantly for testing the playbook.events.schedule feature of sls-apb in serverless.yaml\",\n    \"StartAt\": \"Was_Playbook_Direct_Executed\",\n    \"States\": {\n        \"Was_Playbook_Direct_Executed\": {\n            \"Type\": \"Choice\",\n            \"Choices\": [\n                {\n                    \"And\": [\n                        {\n                            \"Variable\": \"$.artifacts\",\n                            \"IsPresent\": true\n                        },\n                        {\n                            \"Variable\": \"$.execution_id\",\n                            \"IsPresent\": true\n                        },\n                        {\n                            \"Variable\": \"$.errors\",\n                            \"IsPresent\": false\n                        },\n                        {\n                            \"Variable\": \"$.results\",\n                            \"IsPresent\": false\n                        }\n                    ],\n                    \"Next\": \"PLAYBOOK_FORMATTER\"\n                },\n                {\n                    \"And\": [\n                        {\n                            \"Variable\": \"$.artifacts\",\n                            \"IsPresent\": true\n                        },\n                        {\n                            \"Variable\": \"$.execution_id\",\n                            \"IsPresent\": true\n                        },\n                        {\n                            \"Variable\": \"$.errors\",\n                            \"IsPresent\": true\n                        },\n                        {\n                            \"Variable\": \"$.results\",\n                            \"IsPresent\": true\n                        }\n                    ],\n                    \"Next\": \"HelloWorld\"\n                }\n            ],\n            \"Default\": \"Setup_Socless_Global_State\"\n        },\n        \"Setup_Socless_Global_State\": {\n            \"Type\": \"Task\",\n            \"Resource\": \"arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:_socless_setup_global_state_for_direct_invoked_playbook\",\n            \"Parameters\": {\n                \"execution_id.$\": \"$$.Execution.Name\",\n                \"playbook_name.$\": \"$$.StateMachine.Name\",\n                \"playbook_event_details.$\": \"$$.Execution.Input\"\n            },\n            \"Next\": \"HelloWorld\"\n        },\n        \"PLAYBOOK_FORMATTER\": {\n            \"Type\": \"Pass\",\n            \"Parameters\": {\n                \"execution_id.$\": \"$.execution_id\",\n                \"artifacts.$\": \"$.artifacts\",\n                \"results\": {},\n                \"errors\": {}\n            },\n            \"Next\": \"HelloWorld\"\n        },\n        \"HelloWorld\": {\n            \"Type\": \"Pass\",\n            \"End\": true\n        }\n    }\n}"
+				},
+				"LoggingConfiguration": {
+					"Destinations": [{
+						"CloudWatchLogsLogGroup": {
+							"LogGroupArn": "${{cf:socless-${{self:provider.stage}}.PlaybooksLogGroup}}"
+						}
+					}],
+					"IncludeExecutionData": false,
+					"Level": "ALL"
+				}
+			}
+		},
+		"HelloWorldEventRule0": {
+			"Type": "AWS::Events::Rule",
+			"Properties": {
+				"Description": "Sample playbook schedule",
+				"ScheduleExpression": "cron(0 12 * * ? *)",
+				"State": "ENABLED",
+				"Targets": [{
+					"Arn": {
+						"Ref": "HelloWorld"
+					},
+					"Id": "HelloWorld",
+					"RoleArn": "${{cf:socless-${{self:provider.stage}}.StatesExecutionRoleArn}}",
+					"Input": "{\"json\": \"payload\"}"
+				}]
+			}
+		}
+	},
+	"Outputs": {
+		"ServerlessDeploymentBucketName": {
+			"Value": {
+				"Ref": "ServerlessDeploymentBucket"
+			},
+			"Export": {
+				"Name": "sls-socless-playbooks-sandbox-ServerlessDeploymentBucketName"
+			}
+		},
+		"HelloWorld": {
+			"Description": "A simple playbook used predominantly for testing the playbook.events.schedule feature of sls-apb in serverless.yaml",
+			"Value": {
+				"Ref": "HelloWorld"
+			},
+			"Export": {
+				"Name": "sls-socless-playbooks-sandbox-HelloWorld"
+			}
+		},
+		"HelloWorldEventRule0": {
+			"Description": "Sample playbook schedule",
+			"Value": {
+				"Ref": "HelloWorldEventRule0"
+			},
+			"Export": {
+				"Name": "sls-socless-playbooks-sandbox-HelloWorldEventRule0"
+			}
+		}
+	}
+}

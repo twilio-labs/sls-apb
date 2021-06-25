@@ -1,3 +1,5 @@
+const pb_with_missing_top_level_keys = require("./pb_with_missing_top_level_keys/playbook");
+
 module.exports = {
-    pb_with_missing_top_level_keys: {"Comment": "this playbook is missing Playbook, States, StartAt"}
-}
+  pb_with_missing_top_level_keys,
+};
