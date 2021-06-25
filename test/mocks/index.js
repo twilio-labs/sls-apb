@@ -3,8 +3,6 @@ const general_playbooks = require("./playbooks/general");
 const task_failure_handlers = require("./playbooks/task_failure_handlers");
 const full_playbooks = require("./playbooks/full_playbooks");
 const error_playbooks = require("./playbooks/error_playbooks");
-const _unused = require("./_unused");
-const mockServerlessObjs = require("./extended_playbook_config/serverless_obj");
 
 // re-export for easy usage in tests
 module.exports = {
@@ -12,6 +10,4 @@ module.exports = {
   ...task_failure_handlers,
   ...full_playbooks,
   ...error_playbooks,
-  ..._unused,
-  ...mockServerlessObjs,
 };

@@ -1,0 +1,45 @@
+
+service: socless-playbooks
+configValidationMode: error
+# unresolvedVariablesNotificationMode: warn
+
+provider:
+  name: aws
+  runtime: python3.7
+  # variableSyntax: "\\${{([ :a-zA-Z0-9._,\\-\\/\\(\\)]+?)}}"
+  # stage: ${{opt:stage}}
+  # region: ${{opt:region}}
+  # profile: default
+  # versionFunctions: false
+  # memorySize: 128
+  # timeout: 10
+  # role: ${{cf:${{self:custom.socless}}.LambdaExecutionRoleArn}}
+  # environment:
+  #   SOCLESS_VAULT: ${{cf:${{self:custom.socless}}.SoclessVault}}
+  #   SOCLESS_RESULTS_TABLE: ${{cf:${{self:custom.socless}}.ExecutionResultsTable}}
+  # vpc:
+  #   securityGroupIds:
+  #     - ${{cf:${{self:custom.socless}}.LambdaVpcSG}}
+  #   subnetIds:
+  #     - ${{cf:${{self:custom.socless}}.PrivateFunctionSubnet}}
+
+plugins:
+  localPath: '../../../'
+  modules:
+    - sls-apb
+
+package:
+  individually: true
+
+custom:
+  sls_apb:
+    logging: true
+
+  playbooks:
+    - hello_world:
+        events:
+          - schedule:
+              rate: "cron(0 12 * * ? *)"
+              description: "Sample playbook schedule"
+              enabled: true
+              input: '{"json": "payload"}'
