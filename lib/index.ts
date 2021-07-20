@@ -1,7 +1,7 @@
 "use strict";
 
 import fse from "fs-extra";
-import { apb } from "./apb";
+import { apb } from "apb";
 import { ApbConfig } from "./sls_apb";
 import {
   PlaybookEventsConfig,
