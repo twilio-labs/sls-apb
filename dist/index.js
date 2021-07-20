@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 var fs_extra_1 = __importDefault(require("fs-extra"));
-var apb_1 = require("./apb");
+var apb_1 = require("apb");
 var playbook_extended_config_1 = require("./playbook_extended_config");
 var ajv_config_1 = require("./ajv_config");
 var validators_1 = require("./validators");

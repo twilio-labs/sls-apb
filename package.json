@@ -16,7 +16,8 @@
   "license": "ISC",
   "dependencies": {
     "ajv": "^8.1.0",
-    "fs-extra": "^9.1.0"
+    "fs-extra": "^9.1.0",
+    "apb": "git+https://github.com/twilio-labs/socless_apb.git#0.1.0"
   },
   "devDependencies": {
     "@serverless/test": "^8.2.0",
