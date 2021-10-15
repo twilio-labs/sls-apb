@@ -1,16 +1,21 @@
 "use strict";
 
 import fse from "fs-extra";
-import { apb } from "apb";
-import { ApbConfig } from "./sls_apb";
+import { apb, ApbConfig } from "apb";
+import { STATES_EXECUTION_ROLE_ARN } from "apb/dist/constants"
+
 import {
   PlaybookEventsConfig,
   buildScheduleResourcesFromEventConfigs,
 } from "./playbook_extended_config";
 import { validate } from "./ajv_config";
 import { playbookEventsConfigValidator } from "./validators";
-import { STATES_EXECUTION_ROLE_ARN } from "./constants";
-import { SlsApbVariableResolutionHelper } from "./sls_apb";
+
+interface SlsApbVariableResolutionHelper {
+  statesExecutionRole: string;
+  renderedPlaybooks: object;
+}
+
 
 class SlsApb {
   sls: any;
