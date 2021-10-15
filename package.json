@@ -17,7 +17,7 @@
   "dependencies": {
     "ajv": "^8.1.0",
     "fs-extra": "^9.1.0",
-    "apb": "git+https://github.com/twilio-labs/socless_apb.git#0.1.0"
+    "apb": "git+https://github.com/twilio-labs/socless_apb.git#ed6a3113ffe575a27d6a14184dab7443f37cc977"
   },
   "devDependencies": {
     "@serverless/test": "^8.2.0",
