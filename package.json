@@ -15,18 +15,18 @@
   "author": "Ubani Balogun",
   "license": "ISC",
   "dependencies": {
-    "ajv": "^8.1.0",
-    "fs-extra": "^9.1.0",
+    "ajv": "^8.6.3",
+    "fs-extra": "10.0.0",
     "apb": "git+https://github.com/twilio-labs/socless_apb.git#ed6a3113ffe575a27d6a14184dab7443f37cc977"
   },
   "devDependencies": {
-    "@serverless/test": "^8.2.0",
+    "@serverless/test": "^8.4.0",
     "chai": "^4.3.4",
     "chai-as-promised": "^7.1.1",
     "mocha": "^8.4.0",
-    "prettier": "^2.2.1",
+    "prettier": "^2.4.1",
     "serverless": "^2.48.0",
-    "typescript": "^4.2.2"
+    "typescript": "^4.4.4"
   },
   "mocha": {
     "require": [
