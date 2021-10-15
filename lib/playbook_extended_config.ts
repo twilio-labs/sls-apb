@@ -1,7 +1,4 @@
-import {
-  STATES_EXECUTION_ROLE_ARN,
-  AWS_EVENT_RULE_RESOURCE_TYPE,
-} from "./constants";
+import { STATES_EXECUTION_ROLE_ARN, AWS_EVENT_RULE_RESOURCE_TYPE } from "apb/dist/constants";
 import { PlaybookExtendedConfigValidationError } from "./errors";
 
 // Inferfaces for the Extended Playbook Configuration object that's supported in serverless.yml
@@ -53,7 +50,7 @@ export interface ScheduleResourceTarget {
 
 export interface ScheduleResourceOutput {
   Description: string;
-  Value: object;
+  Value: Record<string, unknown>;
 }
 
 export function buildScheduleResourceTarget(
@@ -89,9 +86,7 @@ export function buildScheduleResourceProperties(
   return {
     Description: scheduleConfig.description,
     ScheduleExpression: scheduleConfig.rate,
-    State: scheduleConfig.enabled
-      ? ScheduleResourceState.ENABLED
-      : ScheduleResourceState.DISABLED,
+    State: scheduleConfig.enabled ? ScheduleResourceState.ENABLED : ScheduleResourceState.DISABLED,
     Targets: buildScheduleResourceTarget(playbookName, scheduleConfig.input),
   };
 }
@@ -122,26 +117,23 @@ export function buildScheduleResourcesFromEventConfigs(
   playbookName: string,
   scheduleConfigs: PlaybookSchedule[],
   roleArn: string
-) {
-  const resources = {};
-  const outputs = {};
+): { Resources: Record<string, unknown>; Outputs: {} } {
+  const formatted = {
+    Resources: {},
+    Outputs: {},
+  };
+
   scheduleConfigs.forEach((config, index) => {
     const resourceName = buildScheduleResourceName(playbookName, index);
     const resource = buildScheduleResource(playbookName, config.schedule);
     resource.Properties.Targets[0].RoleArn = roleArn;
-    resources[resourceName] = resource;
-    outputs[resourceName] = buildScheduleResourceOutput(
-      resourceName,
-      config.schedule
-    );
+    formatted.Resources[resourceName] = resource;
+    formatted.Outputs[resourceName] = buildScheduleResourceOutput(resourceName, config.schedule);
   });
 
-  return { Resources: resources, Outputs: outputs };
+  return formatted;
 }
 
-export function buildScheduleResourceName(
-  playbookName: string,
-  sequenceId: number
-): string {
+export function buildScheduleResourceName(playbookName: string, sequenceId: number): string {
   return `${playbookName}EventRule${sequenceId}`;
 }
