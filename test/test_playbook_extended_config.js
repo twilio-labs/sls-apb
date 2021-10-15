@@ -5,7 +5,7 @@ const {
   buildScheduleResource,
   buildScheduleResourcesFromEventConfigs,
 } = require("../dist/playbook_extended_config.js");
-const { STATES_EXECUTION_ROLE_ARN, AWS_EVENT_RULE_RESOURCE_TYPE } = require("apb/dist/constants");
+const { STATES_EXECUTION_ROLE_ARN, AWS_EVENT_RULE_RESOURCE_TYPE } = require("apb");
 
 const testPlaybookName = "TestPlaybook";
 const testInput = '{ "hello": "world" }';

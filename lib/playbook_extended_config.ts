@@ -1,4 +1,4 @@
-import { STATES_EXECUTION_ROLE_ARN, AWS_EVENT_RULE_RESOURCE_TYPE } from "apb/dist/constants";
+import { STATES_EXECUTION_ROLE_ARN, AWS_EVENT_RULE_RESOURCE_TYPE } from "apb";
 import { PlaybookExtendedConfigValidationError } from "./errors";
 
 // Inferfaces for the Extended Playbook Configuration object that's supported in serverless.yml
@@ -44,7 +44,7 @@ export enum ScheduleResourceState {
 export interface ScheduleResourceTarget {
   Arn: object;
   Id: string;
-  RoleArn: string;
+  RoleArn: string | { "Fn::Sub": string };
   Input?: string;
 }
 
