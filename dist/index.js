@@ -18,7 +18,6 @@ var apb_1 = require("apb");
 var playbook_extended_config_1 = require("./playbook_extended_config");
 var ajv_config_1 = require("./ajv_config");
 var validators_1 = require("./validators");
-var constants_1 = require("./constants");
 var SlsApb = /** @class */ (function () {
     function SlsApb(serverless, options) {
         var _this = this;
@@ -42,16 +41,14 @@ var SlsApb = /** @class */ (function () {
         // The _slsApbVariablesResolutionHelper exists to support these use-cases.
         // Any data with serverless variables that needs to be processed pre-variable resolution then accessed post-resolution (via serverless lifecycle hooks) lives here
         // It exists on the serverless.custom object because variables in the custom object are unresolved during plugin initialization, but resolved post-plugin initialization
-        var variableResolutionHelper = {
+        this.sls.service.custom._slsApbVariableResolutionHelper = {
             renderedPlaybooks: {},
-            statesExecutionRole: constants_1.STATES_EXECUTION_ROLE_ARN,
+            statesExecutionRole: apb_1.STATES_EXECUTION_ROLE_ARN,
         };
-        this.sls.service.custom._slsApbVariableResolutionHelper = variableResolutionHelper;
         // // add states execution role to custom variables as well so that it
         // // gets resolved
         // this.sls.service.custom._statesExecutionRole = STATES_EXECUTION_ROLE_ARN;
-        var playbooks = this.sls
-            .service.custom.playbooks;
+        var playbooks = this.sls.service.custom.playbooks;
         this.playbookNameAndExtendedConfig = {};
         if (!playbooks) {
             this.sls.cli.log("Warning: No playbooks listed for deployment. List playbooks under serverless.yml `custom.playbooks` section to deploy them");
@@ -78,12 +75,11 @@ var SlsApb = /** @class */ (function () {
                 try {
                     var stateMachine = fs_extra_1.default.readJsonSync(playbook_path);
                     var renderedPlaybook = new apb_1.apb(stateMachine, _this.apb_config);
-                    _this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Resources = __assign(__assign({}, _this.sls.service.custom._slsApbVariableResolutionHelper
-                        .renderedPlaybooks.Resources), renderedPlaybook.StateMachineYaml.Resources);
-                    _this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Outputs = __assign(__assign({}, _this.sls.service.custom._slsApbVariableResolutionHelper
-                        .renderedPlaybooks.Outputs), renderedPlaybook.StateMachineYaml.Outputs);
+                    _this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Resources = __assign(__assign({}, _this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Resources), renderedPlaybook.StateMachineYaml.Resources);
+                    _this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Outputs = __assign(__assign({}, _this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Outputs), renderedPlaybook.StateMachineYaml.Outputs);
                     if (!!playbookExtendedConfig) {
-                        _this.playbookNameAndExtendedConfig[renderedPlaybook.PlaybookName] = playbookExtendedConfig;
+                        _this.playbookNameAndExtendedConfig[renderedPlaybook.PlaybookName] =
+                            playbookExtendedConfig;
                     }
                 }
                 catch (err) {
@@ -105,18 +101,15 @@ var SlsApb = /** @class */ (function () {
         return playbooksFolder + "/" + playbookDir + "/playbook.json";
     };
     SlsApb.prototype.compilePlaybookResources = function () {
-        this.sls.service.provider.compiledCloudFormationTemplate.Resources = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Resources), this.sls.service.custom._slsApbVariableResolutionHelper
-            .renderedPlaybooks.Resources);
-        this.sls.service.provider.compiledCloudFormationTemplate.Outputs = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Outputs), this.sls.service.custom._slsApbVariableResolutionHelper
-            .renderedPlaybooks.Outputs);
+        this.sls.service.provider.compiledCloudFormationTemplate.Resources = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Resources), this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Resources);
+        this.sls.service.provider.compiledCloudFormationTemplate.Outputs = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Outputs), this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Outputs);
     };
     SlsApb.prototype.compileScheduledEvents = function () {
         var compiledResource;
         for (var _i = 0, _a = Object.entries(this.playbookNameAndExtendedConfig); _i < _a.length; _i++) {
             var _b = _a[_i], playbookName = _b[0], extendedConfig = _b[1];
-            ajv_config_1.validate(extendedConfig, validators_1.playbookEventsConfigValidator);
-            compiledResource = playbook_extended_config_1.buildScheduleResourcesFromEventConfigs(playbookName, extendedConfig.events, this.sls.service.custom._slsApbVariableResolutionHelper
-                .statesExecutionRole);
+            (0, ajv_config_1.validate)(extendedConfig, validators_1.playbookEventsConfigValidator);
+            compiledResource = (0, playbook_extended_config_1.buildScheduleResourcesFromEventConfigs)(playbookName, extendedConfig.events, this.sls.service.custom._slsApbVariableResolutionHelper.statesExecutionRole);
             this.sls.service.provider.compiledCloudFormationTemplate.Resources = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Resources), compiledResource.Resources);
             this.sls.service.provider.compiledCloudFormationTemplate.Outputs = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Outputs), compiledResource.Outputs);
         }

@@ -1,16 +1,14 @@
 "use strict";
 
 import fse from "fs-extra";
-import { apb } from "apb";
-import { ApbConfig } from "./sls_apb";
+import { apb, ApbConfig, STATES_EXECUTION_ROLE_ARN } from "apb";
+
 import {
   PlaybookEventsConfig,
   buildScheduleResourcesFromEventConfigs,
 } from "./playbook_extended_config";
 import { validate } from "./ajv_config";
 import { playbookEventsConfigValidator } from "./validators";
-import { STATES_EXECUTION_ROLE_ARN } from "./constants";
-import { SlsApbVariableResolutionHelper } from "./sls_apb";
 
 class SlsApb {
   sls: any;
@@ -42,18 +40,16 @@ class SlsApb {
     // The _slsApbVariablesResolutionHelper exists to support these use-cases.
     // Any data with serverless variables that needs to be processed pre-variable resolution then accessed post-resolution (via serverless lifecycle hooks) lives here
     // It exists on the serverless.custom object because variables in the custom object are unresolved during plugin initialization, but resolved post-plugin initialization
-    const variableResolutionHelper: SlsApbVariableResolutionHelper = {
+    this.sls.service.custom._slsApbVariableResolutionHelper = {
       renderedPlaybooks: {},
       statesExecutionRole: STATES_EXECUTION_ROLE_ARN,
     };
-
-    this.sls.service.custom._slsApbVariableResolutionHelper = variableResolutionHelper;
     // // add states execution role to custom variables as well so that it
     // // gets resolved
     // this.sls.service.custom._statesExecutionRole = STATES_EXECUTION_ROLE_ARN;
 
-    let playbooks: (string | Record<string, PlaybookEventsConfig>)[] = this.sls
-      .service.custom.playbooks;
+    let playbooks: (string | Record<string, PlaybookEventsConfig>)[] =
+      this.sls.service.custom.playbooks;
 
     this.playbookNameAndExtendedConfig = {};
 
@@ -69,12 +65,8 @@ class SlsApb {
         if (typeof playbook_config === "string") {
           playbook_dir = playbook_config;
           playbookExtendedConfig = null;
-        } else if (
-          Object.prototype.toString.call(playbook_config) === "[object Object]"
-        ) {
-          [playbook_dir, playbookExtendedConfig] = Object.entries(
-            playbook_config
-          )[0];
+        } else if (Object.prototype.toString.call(playbook_config) === "[object Object]") {
+          [playbook_dir, playbookExtendedConfig] = Object.entries(playbook_config)[0];
         } else {
           throw new Error(
             `Invalid configuration in playbooks object. Only string or object allowed. Given ${playbook_config}`
@@ -91,26 +83,21 @@ class SlsApb {
           let renderedPlaybook = new apb(stateMachine, this.apb_config);
 
           this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Resources = {
-            ...this.sls.service.custom._slsApbVariableResolutionHelper
-              .renderedPlaybooks.Resources,
+            ...this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Resources,
             ...renderedPlaybook.StateMachineYaml.Resources,
           };
 
           this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Outputs = {
-            ...this.sls.service.custom._slsApbVariableResolutionHelper
-              .renderedPlaybooks.Outputs,
+            ...this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Outputs,
             ...renderedPlaybook.StateMachineYaml.Outputs,
           };
 
           if (!!playbookExtendedConfig) {
-            this.playbookNameAndExtendedConfig[
-              renderedPlaybook.PlaybookName
-            ] = playbookExtendedConfig;
+            this.playbookNameAndExtendedConfig[renderedPlaybook.PlaybookName] =
+              playbookExtendedConfig;
           }
         } catch (err) {
-          throw new Error(
-            `Failed to render State Machine for ${playbook_path}: ${err}`
-          );
+          throw new Error(`Failed to render State Machine for ${playbook_path}: ${err}`);
         }
       });
     }
@@ -136,14 +123,12 @@ class SlsApb {
   compilePlaybookResources() {
     this.sls.service.provider.compiledCloudFormationTemplate.Resources = {
       ...this.sls.service.provider.compiledCloudFormationTemplate.Resources,
-      ...this.sls.service.custom._slsApbVariableResolutionHelper
-        .renderedPlaybooks.Resources,
+      ...this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Resources,
     };
 
     this.sls.service.provider.compiledCloudFormationTemplate.Outputs = {
       ...this.sls.service.provider.compiledCloudFormationTemplate.Outputs,
-      ...this.sls.service.custom._slsApbVariableResolutionHelper
-        .renderedPlaybooks.Outputs,
+      ...this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Outputs,
     };
   }
 
@@ -157,8 +142,7 @@ class SlsApb {
       compiledResource = buildScheduleResourcesFromEventConfigs(
         playbookName,
         extendedConfig.events,
-        this.sls.service.custom._slsApbVariableResolutionHelper
-          .statesExecutionRole
+        this.sls.service.custom._slsApbVariableResolutionHelper.statesExecutionRole
       );
 
       this.sls.service.provider.compiledCloudFormationTemplate.Resources = {

@@ -5,10 +5,7 @@ const {
   buildScheduleResource,
   buildScheduleResourcesFromEventConfigs,
 } = require("../dist/playbook_extended_config.js");
-const {
-  STATES_EXECUTION_ROLE_ARN,
-  AWS_EVENT_RULE_RESOURCE_TYPE,
-} = require("../dist/constants.js");
+const { STATES_EXECUTION_ROLE_ARN, AWS_EVENT_RULE_RESOURCE_TYPE } = require("apb");
 
 const testPlaybookName = "TestPlaybook";
 const testInput = '{ "hello": "world" }';
@@ -98,18 +95,12 @@ const expectedScheduleResourcesFromEventConfig = {
 describe("playbook_events", () => {
   describe("#buildScheduleResourceTarget", () => {
     it("Should return expected ScheduleResourceTarget for valid config with `input` key", () => {
-      const builtTarget = buildScheduleResourceTarget(
-        testPlaybookName,
-        testInput
-      );
+      const builtTarget = buildScheduleResourceTarget(testPlaybookName, testInput);
       assert.deepStrictEqual(expectedScheduleTargetWithInput, builtTarget);
     });
 
     it("Should return expected ScheduleResourceTarget for valid config with no `input` key", () => {
-      const builtTarget = buildScheduleResourceTarget(
-        testPlaybookName,
-        undefined
-      );
+      const builtTarget = buildScheduleResourceTarget(testPlaybookName, undefined);
       assert.deepStrictEqual(expectedScheduleTargetNoInput, builtTarget);
     });
   });
@@ -121,10 +112,7 @@ describe("playbook_events", () => {
         testScheduleConfigWithInput
       );
 
-      assert.deepStrictEqual(
-        expectedScheduleResourcePropertiesWithInput,
-        builtProperties
-      );
+      assert.deepStrictEqual(expectedScheduleResourcePropertiesWithInput, builtProperties);
     });
 
     it("Should builed expected ScheduleResourceProperties with valid config that doesn't have `input` key", () => {
@@ -133,19 +121,13 @@ describe("playbook_events", () => {
         testScheduleConfigNoInput
       );
 
-      assert.deepStrictEqual(
-        expectedScheduleResourcePropertiesNoInput,
-        builtProperties
-      );
+      assert.deepStrictEqual(expectedScheduleResourcePropertiesNoInput, builtProperties);
     });
   });
 
   describe("#buildScheduleResource", () => {
     it("Should return expected ScheduleResource", () => {
-      const builtResource = buildScheduleResource(
-        testPlaybookName,
-        testScheduleConfigWithInput
-      );
+      const builtResource = buildScheduleResource(testPlaybookName, testScheduleConfigWithInput);
       assert.deepStrictEqual(builtResource, expectedScheduleResourceWithInput);
     });
   });
@@ -158,10 +140,7 @@ describe("playbook_events", () => {
         STATES_EXECUTION_ROLE_ARN
       );
 
-      assert.deepStrictEqual(
-        expectedScheduleResourcesFromEventConfig,
-        builtResourceMap
-      );
+      assert.deepStrictEqual(expectedScheduleResourcesFromEventConfig, builtResourceMap);
     });
   });
 });

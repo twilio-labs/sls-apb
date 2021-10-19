@@ -1,5 +1,5 @@
 import { ajv } from "./ajv_config";
-import { JSONSchemaType } from "ajv";
+// import { JSONSchemaType } from "ajv";
 import {
   PlaybookEventsConfig,
   PlaybookSchedule,
