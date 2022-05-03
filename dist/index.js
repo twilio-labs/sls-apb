@@ -66,11 +66,11 @@ var SlsApb = /** @class */ (function () {
                     _a = Object.entries(playbook_config)[0], playbook_dir = _a[0], playbookExtendedConfig = _a[1];
                 }
                 else {
-                    throw new Error("Invalid configuration in playbooks object. Only string or object allowed. Given " + playbook_config);
+                    throw new Error("Invalid configuration in playbooks object. Only string or object allowed. Given ".concat(playbook_config));
                 }
                 // Create the path to the playbook.json file
                 var playbook_path = _this.buildPlaybookPath(playbook_dir);
-                _this.sls.cli.log("Rendering State Machine for " + playbook_path + "...");
+                _this.sls.cli.log("Rendering State Machine for ".concat(playbook_path, "..."));
                 // Read playbook.json file, use APB to render the State Machine then add it to the resources list
                 try {
                     var stateMachine = fs_extra_1.default.readJsonSync(playbook_path);
@@ -83,7 +83,7 @@ var SlsApb = /** @class */ (function () {
                     }
                 }
                 catch (err) {
-                    throw new Error("Failed to render State Machine for " + playbook_path + ": " + err);
+                    throw new Error("Failed to render State Machine for ".concat(playbook_path, ": ").concat(err));
                 }
             });
         }
@@ -98,7 +98,7 @@ var SlsApb = /** @class */ (function () {
     };
     SlsApb.prototype.buildPlaybookPath = function (playbookDir) {
         var playbooksFolder = this.apb_config.playbooksFolder || "./playbooks";
-        return playbooksFolder + "/" + playbookDir + "/playbook.json";
+        return "".concat(playbooksFolder, "/").concat(playbookDir, "/playbook.json");
     };
     SlsApb.prototype.compilePlaybookResources = function () {
         this.sls.service.provider.compiledCloudFormationTemplate.Resources = __assign(__assign({}, this.sls.service.provider.compiledCloudFormationTemplate.Resources), this.sls.service.custom._slsApbVariableResolutionHelper.renderedPlaybooks.Resources);
