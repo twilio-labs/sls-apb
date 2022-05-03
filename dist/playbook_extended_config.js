@@ -22,7 +22,7 @@ function buildScheduleResourceTarget(playbookName, input) {
             JSON.parse(input);
         }
         catch (err) {
-            throw new errors_1.PlaybookExtendedConfigValidationError("\"input\" provided to schedule for " + playbookName + " is not a valid JSONinfied string. Provided input is " + input);
+            throw new errors_1.PlaybookExtendedConfigValidationError("\"input\" provided to schedule for ".concat(playbookName, " is not a valid JSONinfied string. Provided input is ").concat(input));
         }
         targetConfig.Input = input;
     }
@@ -70,6 +70,6 @@ function buildScheduleResourcesFromEventConfigs(playbookName, scheduleConfigs, r
 }
 exports.buildScheduleResourcesFromEventConfigs = buildScheduleResourcesFromEventConfigs;
 function buildScheduleResourceName(playbookName, sequenceId) {
-    return playbookName + "EventRule" + sequenceId;
+    return "".concat(playbookName, "EventRule").concat(sequenceId);
 }
 exports.buildScheduleResourceName = buildScheduleResourceName;
